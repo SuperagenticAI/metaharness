@@ -5,6 +5,7 @@
 [![Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-111111?logo=github&logoColor=white)](https://superagenticai.github.io/metaharness/)
 
 `metaharness` is an open source Python library for optimizing executable harnesses around agentic coding systems.
+It is inspired by the [Meta Harness paper](https://arxiv.org/pdf/2603.28052) and is an unofficial open source implementation of the core ideas in that work.
 
 It is built for teams who want to improve the code and files around an agent workflow, not just the prompt.
 That includes instruction files, setup flows, validation scripts, test scripts, routing logic, and other executable support code.

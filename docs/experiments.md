@@ -4,6 +4,8 @@ This page records the experiments completed so far during development.
 
 For repeated benchmark runs, use `metaharness experiment` so the results are saved as both JSON and TSV.
 
+The experiment workflow is also influenced by [Autoresearch](https://github.com/karpathy/autoresearch) by Andrej Karpathy, especially in the emphasis on explicit experiment records, repeatable runs, and outcome-driven iteration.
+
 ## Early Scaffold Experiments
 
 These were the first live local OSS checks used to validate the outer loop before the real benchmark targets were added.

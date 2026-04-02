@@ -4,6 +4,8 @@
 
 `metaharness` optimizes executable harnesses by keeping the outer loop simple and making the filesystem the source of truth.
 
+This package is inspired by the [Meta Harness paper](https://arxiv.org/pdf/2603.28052) and is an unofficial implementation of the core outer-loop ideas from that work.
+
 Each run:
 
 1. materializes a baseline candidate
@@ -11,6 +13,14 @@ Each run:
 3. validates the result
 4. evaluates the result
 5. stores everything on disk
+
+## Design Influences
+
+Three influences are especially important for understanding why the library looks the way it does:
+
+- the [Meta Harness paper](https://arxiv.org/pdf/2603.28052), which motivated treating executable harness code as the optimization target
+- [GEPA](https://github.com/gepa-ai/gepa), which was useful as a reference point for packaging reusable optimization tooling
+- [Autoresearch](https://github.com/karpathy/autoresearch) by Andrej Karpathy, which influenced the focus on explicit experiment loops, keep or discard outcomes, and constrained mutable scope
 
 ## Main Components
 

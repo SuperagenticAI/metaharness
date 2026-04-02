@@ -3,6 +3,7 @@
   <h1>metaharness</h1>
   <p>
     <code>metaharness</code> is an open source Python library for optimizing executable harnesses around agentic coding systems.
+    It is inspired by the <a href="https://arxiv.org/pdf/2603.28052">Meta Harness paper</a> and is an unofficial open source implementation of the core ideas in that work.
     It treats the harness itself as the optimization target, not just the prompt.
     That includes instruction files, bootstrap scripts, validation scripts, test flows, routing logic, and other executable support code.
   </p>
@@ -65,6 +66,15 @@ An optimizer may edit the wrong files and still produce noisy or misleading resu
 
 `metaharness` addresses these problems by making the harness executable, inspectable, and benchmarkable.
 It captures a compact environment bootstrap before each proposal, stores every candidate on disk, and can enforce an explicit write scope through `allowed_write_paths`.
+
+## Lineage And Inspiration
+
+`metaharness` is inspired first by the <a href="https://arxiv.org/pdf/2603.28052">Meta Harness paper</a>, which motivated the overall idea of optimizing executable harness code instead of treating the prompt as the only optimization surface.
+
+Two other projects were also useful reference points while shaping this library:
+
+- [GEPA](https://github.com/gepa-ai/gepa), especially as a reference for packaging and reusable optimization tooling
+- [Autoresearch](https://github.com/karpathy/autoresearch) by Andrej Karpathy, especially for explicit experiment loops, keep or discard thinking, and constrained mutable scope
 
 ## What It Optimizes
 
