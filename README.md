@@ -401,4 +401,4 @@ uv run python examples/ticket_router/run.py --backend fake --budget 1
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+Apache 2.0. See [LICENSE](LICENSE).
