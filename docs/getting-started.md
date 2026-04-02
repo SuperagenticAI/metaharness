@@ -1,21 +1,23 @@
 # Getting Started
 
+This page walks through the fastest path from a clean checkout to a real `metaharness` run that you can inspect.
+
 ## Prerequisites
 
 - Python 3.11 or newer
 - [`uv`](https://docs.astral.sh/uv/)
-- optional: `codex` CLI for live runs
+- optional: `codex` CLI for hosted or local Codex runs
 - optional: Ollama with `gpt-oss:20b` or `gpt-oss:120b` for local runs
 
 ## Install
 
-Project setup:
+Use `uv` to create the project environment:
 
 ```bash
 uv sync
 ```
 
-If you want to build the docs site too:
+If you want the docs toolchain too:
 
 ```bash
 uv sync --group dev
@@ -27,9 +29,13 @@ Check the CLI:
 uv run metaharness --help
 ```
 
-## First Run
+## The Fastest First Run
 
-The fastest useful first run is the fake backend on a real benchmark:
+<div class="callout-card" markdown="1">
+<strong>Recommended first run</strong>
+
+Use the fake backend on a real benchmark. This exercises the full loop without needing provider auth, network access, or a local model server.
+</div>
 
 ```bash
 uv run metaharness run examples/python_fixture_benchmark --backend fake --budget 1 --run-name first-run
@@ -41,40 +47,55 @@ Expected result:
 - `best_candidate_id=c0001`
 - `best_objective=1.000`
 
-## Understand The Output
+## What To Inspect Next
 
-Inspect a run:
+<div class="command-grid" markdown="1">
+<div class="command-card" markdown="1">
+### Inspect A Single Run
+
+Use this when you want a quick human-readable summary of the candidates and outcomes.
 
 ```bash
 uv run metaharness inspect examples/python_fixture_benchmark/runs/first-run
 ```
+</div>
+<div class="command-card" markdown="1">
+### Export The Candidate Ledger
 
-Summarize all runs for a project:
-
-```bash
-uv run metaharness summarize examples/python_fixture_benchmark
-```
-
-Export the candidate ledger for one run:
+Use this when you want one row per candidate with outcomes, changed-file counts, and validation or evaluation summaries.
 
 ```bash
 uv run metaharness ledger examples/python_fixture_benchmark/runs/first-run --tsv
 ```
+</div>
+<div class="command-card" markdown="1">
+### Summarize A Whole Benchmark
 
-Compare specific runs:
+Use this when you want one row per run and a compact view of score, duration, and failure patterns.
 
 ```bash
-uv run metaharness compare \
-  examples/python_fixture_benchmark/runs/hosted-codex-20260401 \
-  examples/python_fixture_benchmark/runs/ollama-20b-20260401 \
-  examples/python_fixture_benchmark/runs/ollama-120b-20260401
+uv run metaharness summarize examples/python_fixture_benchmark
 ```
+</div>
+</div>
 
-Run a saved experiment matrix:
+## Run A Saved Experiment Matrix
+
+Once the single-run flow makes sense, move to repeated trials:
 
 ```bash
 uv run metaharness experiment --config examples/experiment_configs/fake-benchmarks.json
 ```
+
+This writes:
+
+- `experiment.json`
+- `trials.json`
+- `aggregates.json`
+- `trials.tsv`
+- `aggregates.tsv`
+
+Use this path when you want reproducible benchmarking rather than ad hoc manual runs.
 
 ## Use Hosted Codex
 
@@ -84,16 +105,25 @@ Requirements:
 - authenticated Codex session or API key setup
 - outbound network access
 
-Run a real benchmark with hosted Codex:
+<div class="command-grid" markdown="1">
+<div class="command-card" markdown="1">
+### Probe The CLI
+
+```bash
+uv run metaharness smoke codex examples/python_fixture_benchmark --probe-only
+```
+</div>
+<div class="command-card" markdown="1">
+### Run Hosted Codex
 
 ```bash
 uv run metaharness run examples/python_fixture_benchmark --backend codex --hosted --budget 1 --run-name hosted-codex
 ```
+</div>
+</div>
 
-Important:
-
-- use `--hosted` if a project config defaults to local Ollama
-- hosted Codex is the strongest current path for real benchmark runs in this repository
+Use `--hosted` if a project config defaults to local Ollama.
+Hosted Codex is the strongest current path for real benchmark runs in this repository.
 
 ## Use Local Codex Over Ollama
 
@@ -102,49 +132,66 @@ Requirements:
 - Ollama server reachable on `127.0.0.1:11434`
 - a local model such as `gpt-oss:20b` or `gpt-oss:120b`
 
-Probe the local path first:
+<div class="command-grid" markdown="1">
+<div class="command-card" markdown="1">
+### Probe The Local Path
 
 ```bash
 uv run metaharness smoke codex examples/python_fixture_benchmark --probe-only --oss --local-provider ollama --model gpt-oss:20b
 ```
-
-Run a real benchmark:
+</div>
+<div class="command-card" markdown="1">
+### Run `gpt-oss:20b`
 
 ```bash
 uv run metaharness run examples/python_fixture_benchmark --backend codex --oss --local-provider ollama --model gpt-oss:20b --proposal-timeout 240 --budget 1 --run-name ollama-20b
 ```
-
-For the larger model:
+</div>
+<div class="command-card" markdown="1">
+### Run `gpt-oss:120b`
 
 ```bash
 uv run metaharness run examples/python_fixture_benchmark --backend codex --oss --local-provider ollama --model gpt-oss:120b --proposal-timeout 420 --budget 1 --run-name ollama-120b
 ```
+</div>
+</div>
 
 ## Create Your Own Project
 
-Scaffold a coding-tool project:
+If you want to optimize your own coding-agent harness, scaffold a project:
 
 ```bash
 uv run metaharness scaffold coding-tool ./my-coding-tool-optimizer
 ```
 
-Faster local profile:
+Available scaffold profiles:
+
+- `standard`
+- `local-oss-smoke`
+- `local-oss-medium`
+
+Examples:
 
 ```bash
 uv run metaharness scaffold coding-tool ./my-local-oss-smoke --profile local-oss-smoke
-```
-
-Medium local profile:
-
-```bash
 uv run metaharness scaffold coding-tool ./my-local-oss-medium --profile local-oss-medium
 ```
 
-If you want a checked-in experiment workflow for your own project, add a small JSON spec and run it with:
+If you want a checked-in experiment workflow for your own project, add a small JSON spec and run:
 
 ```bash
 uv run metaharness experiment --config ./my-experiment.json
 ```
+
+## What A Successful First Session Looks Like
+
+By the end of a first session, you should be able to:
+
+- run a benchmark with the fake backend
+- inspect the winning candidate
+- export a candidate ledger
+- run a saved experiment matrix
+- decide whether to use hosted Codex or a local Ollama model for the next step
 
 ## Build The Docs
 

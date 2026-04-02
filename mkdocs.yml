@@ -21,6 +21,8 @@ theme:
   font: false
   icon:
     repo: fontawesome/brands/github
+extra:
+  generator: false
 markdown_extensions:
   - admonition
   - attr_list
