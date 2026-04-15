@@ -1,8 +1,0 @@
-[
-  {
-    "id": "test-task-1",
-    "type": "command",
-    "command": "echo 'success'",
-    "weight": 1.0
-  }
-]

@@ -204,7 +204,6 @@ Gemini is available as an experimental backend, but the documented benchmark evi
 - `examples/python_fixture_benchmark`
 - `examples/python_cli_benchmark`
 - `examples/ticket_router`
-- `examples/minimal_plugin`
 
 The two Python benchmarks are the main release-quality examples.
 They use real shell scripts, real fixture repositories, and deterministic acceptance checks rather than placeholder text-only scoring.
@@ -247,18 +246,6 @@ Use a saved config to run repeated trials and write JSON plus TSV outputs.
 ```bash
 uv run metaharness experiment \
   --config examples/experiment_configs/fake-benchmarks.json
-```
-</div>
-<div class="command-card" markdown="1">
-### Run A Plugin Backend
-
-Test the plugin system with a minimal backend plugin.
-
-```bash
-uv run metaharness run \
-  examples/minimal_plugin \
-  --backend minimal \
-  --budget 1
 ```
 </div>
 </div>
