@@ -1,0 +1,31 @@
+{
+  "applied": true,
+  "changed_files": [],
+  "cost_usd": null,
+  "events": [
+    {
+      "command": null,
+      "file_changes": [],
+      "kind": "message",
+      "output": null,
+      "raw": null,
+      "text": "Minimal plugin: Test the metaharness plugin system",
+      "tool_name": null,
+      "ts": null
+    }
+  ],
+  "files_read": {},
+  "files_written": {},
+  "final_text": "Minimal plugin: Test the metaharness plugin system",
+  "metadata": {
+    "model": "fake-model",
+    "workspace_change_count": 0,
+    "workspace_changes_path": "/Users/shashi/oss/meta-harness/examples/minimal_plugin/runs/minimal-run/candidates/c0003/proposal/workspace_changes.json",
+    "workspace_diff_path": "/Users/shashi/oss/meta-harness/examples/minimal_plugin/runs/minimal-run/candidates/c0003/proposal/workspace.diff"
+  },
+  "raw_stderr_path": null,
+  "raw_stdout_path": null,
+  "summary": "Minimal plugin completed",
+  "token_usage": {},
+  "tool_call_count": 0
+}

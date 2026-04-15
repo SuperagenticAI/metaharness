@@ -1,0 +1,38 @@
+{
+  "applied": true,
+  "changed_files": [
+    "README.md"
+  ],
+  "cost_usd": null,
+  "events": [
+    {
+      "command": null,
+      "file_changes": [
+        "README.md"
+      ],
+      "kind": "file_change",
+      "output": null,
+      "raw": null,
+      "text": "Updated candidate c0001.",
+      "tool_name": null,
+      "ts": null
+    }
+  ],
+  "files_read": {},
+  "files_written": {},
+  "final_text": "Updated candidate c0001.",
+  "metadata": {
+    "command": [
+      "fake-backend"
+    ],
+    "returncode": 0,
+    "workspace_change_count": 1,
+    "workspace_changes_path": "/Users/shashi/oss/meta-harness/examples/minimal_plugin/runs/fake-run/candidates/c0001/proposal/workspace_changes.json",
+    "workspace_diff_path": "/Users/shashi/oss/meta-harness/examples/minimal_plugin/runs/fake-run/candidates/c0001/proposal/workspace.diff"
+  },
+  "raw_stderr_path": "/Users/shashi/oss/meta-harness/examples/minimal_plugin/runs/fake-run/candidates/c0001/proposal/stderr.txt",
+  "raw_stdout_path": "/Users/shashi/oss/meta-harness/examples/minimal_plugin/runs/fake-run/candidates/c0001/proposal/stdout.jsonl",
+  "summary": "Updated candidate c0001.",
+  "token_usage": {},
+  "tool_call_count": 0
+}

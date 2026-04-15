@@ -1,0 +1,21 @@
+{
+  "metadata": {
+    "details": [
+      {
+        "id": "test-task-1",
+        "message": "command succeeded: echo 'success'",
+        "returncode": 0,
+        "status": "passed",
+        "weight": 1.0
+      }
+    ],
+    "stage": "search"
+  },
+  "metrics": {
+    "score": 1.0,
+    "weight_hit": 1.0,
+    "weight_total": 1.0
+  },
+  "objective": 1.0,
+  "summary": "[search] Weighted score 1.00/1.00 = 1.000"
+}

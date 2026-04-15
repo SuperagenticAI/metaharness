@@ -1,0 +1,14 @@
+[
+  {
+    "command": null,
+    "file_changes": [
+      "README.md"
+    ],
+    "kind": "file_change",
+    "output": null,
+    "raw": null,
+    "text": "Updated candidate c0001.",
+    "tool_name": null,
+    "ts": null
+  }
+]

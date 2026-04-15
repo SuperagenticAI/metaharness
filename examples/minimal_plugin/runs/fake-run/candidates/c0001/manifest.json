@@ -1,0 +1,24 @@
+{
+  "candidate_id": "c0001",
+  "frontier_rank": null,
+  "objective": 1.0,
+  "outcome": "discard",
+  "outcome_summary": "Objective 1.000 did not improve over c0000 (1.000).",
+  "parent_candidate_ids": [
+    "c0000"
+  ],
+  "proposal_applied": true,
+  "scope_violation_paths": [],
+  "search_metrics": {
+    "score": 1.0,
+    "weight_hit": 1.0,
+    "weight_total": 1.0
+  },
+  "search_objective": 1.0,
+  "test_metrics": {},
+  "test_objective": null,
+  "test_valid": null,
+  "updated_at": "2026-04-15T22:12:17.395326+00:00",
+  "valid": true,
+  "workspace_dir": "/Users/shashi/oss/meta-harness/examples/minimal_plugin/runs/fake-run/candidates/c0001/workspace"
+}

@@ -140,6 +140,14 @@ body,
 
 .md-button {
   border-radius: 999px;
+  border: 1px solid var(--mh-teal);
+  color: var(--mh-teal) !important;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.md-button:hover {
+  background: rgba(84, 245, 213, 0.15);
 }
 
 .md-button--primary {
