@@ -1,13 +1,51 @@
 import tempfile
 import unittest
+import sys
 from pathlib import Path
 from unittest.mock import patch
 
 from metaharness.integrations.coding_tool.config import load_coding_tool_project
-from metaharness.integrations.coding_tool.runtime import _resolve_command_shell, make_backend
+from metaharness.integrations.coding_tool.runtime import _resolve_command_shell, make_backend, resolve_backend_options
+from metaharness.proposer.fake import FakeBackend
 
 
 class CodingToolConfigTests(unittest.TestCase):
+    def test_load_project_reads_search_and_split_settings(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            (root / "baseline").mkdir()
+            (root / "tasks.json").write_text(
+                '[{"id":"search-1","type":"file_phrase","path":"AGENTS.md","required_phrases":["x"]}]',
+                encoding="utf-8",
+            )
+            (root / "tasks_test.json").write_text(
+                '[{"id":"test-1","type":"file_phrase","path":"AGENTS.md","required_phrases":["y"]}]',
+                encoding="utf-8",
+            )
+            (root / "metaharness.json").write_text(
+                """
+                {
+                  "objective": "demo",
+                  "constraints": [],
+                  "required_files": [],
+                  "tasks_file": "tasks.json",
+                  "test_tasks_file": "tasks_test.json",
+                  "search_mode": "frontier",
+                  "proposal_batch_size": 3,
+                  "selection_policy": "pareto",
+                  "backends": {}
+                }
+                """.strip(),
+                encoding="utf-8",
+            )
+
+            project = load_coding_tool_project(root)
+            self.assertEqual("frontier", project.search_mode)
+            self.assertEqual(3, project.proposal_batch_size)
+            self.assertEqual("pareto", project.selection_policy)
+            self.assertEqual(1, len(project.tasks))
+            self.assertEqual(1, len(project.test_tasks))
+
     def test_make_backend_applies_codex_backend_config(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
@@ -135,7 +173,7 @@ class CodingToolConfigTests(unittest.TestCase):
             self.assertEqual("workspace-write", backend.sandbox)
             self.assertEqual(45.0, backend.timeout_seconds)
 
-    def test_make_backend_applies_pi_backend_config(self) -> None:
+    def test_load_project_reads_backend_plugins(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
             (root / "baseline").mkdir()
@@ -146,13 +184,12 @@ class CodingToolConfigTests(unittest.TestCase):
                   "objective": "demo",
                   "constraints": [],
                   "required_files": [],
-                  "backends": {
-                    "pi": {
-                      "pi_binary": "pi",
-                      "model": "anthropic/claude-sonnet-4-5",
-                      "mode": "json",
-                      "no_session": true,
-                      "proposal_timeout_seconds": 60
+                  "backend_plugins": {
+                    "cursor": {
+                      "factory": "custom_plugin:create_backend",
+                      "options": {
+                        "model": "cursor-pro"
+                      }
                     }
                   }
                 }
@@ -161,33 +198,49 @@ class CodingToolConfigTests(unittest.TestCase):
             )
 
             project = load_coding_tool_project(root)
-            backend = make_backend("pi", project)
+            self.assertIn("cursor", project.backend_plugins)
+            self.assertEqual("custom_plugin:create_backend", project.backend_plugins["cursor"].factory)
+            self.assertEqual("cursor-pro", project.backend_plugins["cursor"].options["model"])
 
-            self.assertEqual("pi", backend.pi_binary)
-            self.assertEqual("anthropic/claude-sonnet-4-5", backend.model)
-            self.assertEqual("json", backend.mode)
-            self.assertTrue(backend.no_session)
-            self.assertEqual(60.0, backend.timeout_seconds)
-
-    def test_make_backend_applies_opencode_backend_config(self) -> None:
+    def test_make_backend_supports_plugin_factory(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
             (root / "baseline").mkdir()
             (root / "tasks.json").write_text("[]", encoding="utf-8")
+            (root / "custom_plugin.py").write_text(
+                """
+from metaharness.proposer.fake import FakeBackend
+
+def create_backend(project, options):
+    marker = str(options.get("marker", "default"))
+    return FakeBackend(
+        mutation=lambda request: {
+            "relative_path": "PLUGIN.md",
+            "content": marker + "\\n",
+            "summary": f"plugin:{marker}",
+            "final_text": f"plugin final {marker}",
+        }
+    )
+                """.strip(),
+                encoding="utf-8",
+            )
             (root / "metaharness.json").write_text(
                 """
                 {
                   "objective": "demo",
                   "constraints": [],
                   "required_files": [],
+                  "backend_plugins": {
+                    "cursor": {
+                      "factory": "custom_plugin:create_backend",
+                      "options": {
+                        "marker": "from-plugin"
+                      }
+                    }
+                  },
                   "backends": {
-                    "opencode": {
-                      "opencode_binary": "opencode",
-                      "model": "openai/gpt-5",
-                      "agent": "build",
-                      "variant": "high",
-                      "output_format": "json",
-                      "proposal_timeout_seconds": 75
+                    "cursor": {
+                      "marker": "from-backend-config"
                     }
                   }
                 }
@@ -196,14 +249,15 @@ class CodingToolConfigTests(unittest.TestCase):
             )
 
             project = load_coding_tool_project(root)
-            backend = make_backend("opencode", project)
-
-            self.assertEqual("opencode", backend.opencode_binary)
-            self.assertEqual("openai/gpt-5", backend.model)
-            self.assertEqual("build", backend.agent)
-            self.assertEqual("high", backend.variant)
-            self.assertEqual("json", backend.output_format)
-            self.assertEqual(75.0, backend.timeout_seconds)
+            sys.path.insert(0, str(root))
+            try:
+                merged = resolve_backend_options("cursor", project, overrides={"marker": "from-override"})
+                self.assertEqual("from-override", merged["marker"])
+                backend = make_backend("cursor", project, overrides={"marker": "from-override"})
+                self.assertIsInstance(backend, FakeBackend)
+            finally:
+                sys.path.remove(str(root))
+                sys.modules.pop("custom_plugin", None)
 
     def test_resolve_command_shell_falls_back_when_zsh_is_unavailable(self) -> None:
         with patch.dict("os.environ", {}, clear=True):

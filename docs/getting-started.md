@@ -7,7 +7,7 @@ It is written for newcomers first.
 
 - Python 3.11 or newer
 - [`uv`](https://docs.astral.sh/uv/)
-- optional: `codex`, `gemini`, `pi`, or `opencode` CLI for live provider runs
+- optional: `codex` or `gemini` CLI for live provider runs
 - optional: Ollama with `gpt-oss:20b` or `gpt-oss:120b` for local runs
 
 ## Install
@@ -212,43 +212,6 @@ uv run metaharness run \
 
 The integration is real, but it is not part of the main validated Codex-first release path.
 
-## Use Pi
-
-Pi is an experimental backend in the current release.
-Use it if Pi is already part of your local workflow and you are comfortable with a try-it-yourself path.
-
-Requirements:
-
-- `pi` CLI installed
-- Pi authentication configured for the model you want to use
-
-<div class="command-grid" markdown="1">
-<div class="command-card" markdown="1">
-### Probe The CLI
-
-```bash
-uv run metaharness smoke pi examples/python_fixture_benchmark --probe-only
-```
-</div>
-<div class="command-card" markdown="1">
-### Run Pi
-
-```bash
-uv run metaharness run \
-  examples/python_fixture_benchmark \
-  --backend pi \
-  --model anthropic/claude-sonnet-4-5 \
-  --proposal-timeout 180 \
-  --budget 1 \
-  --run-name pi-run
-```
-</div>
-</div>
-
-Pi runs through its JSON print mode and defaults to ephemeral `--no-session` behavior inside `metaharness`.
-This keeps optimization runs isolated from Pi's normal interactive session workflow.
-It is not part of the main validated Codex-first release path.
-
 ## Use Local Codex Over Ollama
 
 Requirements:
@@ -309,6 +272,9 @@ If you want to optimize your own coding-agent harness, scaffold a project:
 uv run metaharness scaffold coding-tool ./my-coding-tool-optimizer
 ```
 
+If you want to use a closed-source or internal harness, add a plugin backend in `metaharness.json` under `backend_plugins` and run it with `--backend <name>`.
+See [Extensions](extensions.md) for the factory contract.
+
 Available scaffold profiles:
 
 - `standard`
@@ -328,6 +294,14 @@ uv run metaharness scaffold \
   ./my-local-oss-medium \
   --profile local-oss-medium
 ```
+
+If you are defining a brand-new domain and want an official-style planning workflow first, create a domain onboarding pack:
+
+```bash
+uv run metaharness onboard ./my-domain-onboarding
+```
+
+This writes `ONBOARDING.md` and `domain_spec.md` so search/test splits, metrics, and leakage risks are defined before implementation.
 
 If you want a checked-in experiment workflow for your own project, add a small JSON spec and run:
 

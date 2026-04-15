@@ -1,11 +1,12 @@
 # CLI Reference
 
-The `metaharness` CLI covers four workflows:
+The `metaharness` CLI covers five workflows:
 
 1. scaffold a project
-2. run or probe a backend
-3. inspect and export results
-4. execute repeated experiment matrices
+2. scaffold a domain onboarding pack
+3. run or probe a backend
+4. inspect and export results
+5. execute repeated experiment matrices
 
 Show help:
 
@@ -73,6 +74,21 @@ uv run metaharness scaffold \
 </div>
 </div>
 
+## `onboard`
+
+Create an official-style onboarding pack for a new domain:
+
+```bash
+uv run metaharness onboard ./my-domain-onboarding
+```
+
+This command writes:
+
+- `ONBOARDING.md` with required questions and guardrails
+- `domain_spec.md` with a concrete template for domain, harness, evaluation, and artifact design
+
+Use this before implementing a new adapter so search/test splits, metrics, budget, and leakage risks are defined up front.
+
 ## `run`
 
 Run one optimization project:
@@ -96,6 +112,11 @@ Important options:
 - `--local-provider`
 - `--model`
 - `--proposal-timeout`
+- `--search-mode`
+- `--proposal-batch-size`
+- `--selection-policy`
+
+`--backend` accepts built-ins (`fake`, `codex`, `gemini`) and any plugin backend name defined in `backend_plugins`.
 
 <div class="command-grid" markdown="1">
 <div class="command-card" markdown="1">
@@ -154,16 +175,14 @@ uv run metaharness run \
 ```
 </div>
 <div class="command-card" markdown="1">
-### Pi
+### Plugin Backend
 
-Use Pi in JSON print mode as an experimental proposer backend.
+Use a custom adapter from `backend_plugins`, for example `cursor`.
 
 ```bash
 uv run metaharness run \
   ./my-coding-tool-optimizer \
-  --backend pi \
-  --model anthropic/claude-sonnet-4-5 \
-  --proposal-timeout 180 \
+  --backend cursor \
   --budget 1
 ```
 </div>
@@ -279,23 +298,6 @@ uv run metaharness smoke gemini \
   ./my-coding-tool-optimizer \
   --budget 1 \
   --model gemini-2.5-pro
-```
-
-## `smoke pi`
-
-Probe the Pi path before spending model calls:
-
-```bash
-uv run metaharness smoke pi ./my-coding-tool-optimizer --probe-only
-```
-
-Run one Pi-backed smoke iteration:
-
-```bash
-uv run metaharness smoke pi \
-  ./my-coding-tool-optimizer \
-  --budget 1 \
-  --model anthropic/claude-sonnet-4-5
 ```
 
 ## `inspect`

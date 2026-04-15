@@ -67,6 +67,11 @@ class ProposalResult:
     events: list[AgentEvent] = field(default_factory=list)
     raw_stdout_path: Path | None = None
     raw_stderr_path: Path | None = None
+    token_usage: dict[str, int] = field(default_factory=dict)
+    cost_usd: float | None = None
+    files_read: dict[str, dict[str, int]] = field(default_factory=dict)
+    files_written: dict[str, dict[str, int]] = field(default_factory=dict)
+    tool_call_count: int = 0
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -106,11 +111,17 @@ class CandidateRecord:
     workspace_dir: Path
     manifest_path: Path
     objective: float | None = None
+    search_objective: float | None = None
+    test_objective: float | None = None
+    search_metrics: dict[str, float] = field(default_factory=dict)
+    test_metrics: dict[str, float] = field(default_factory=dict)
     valid: bool = False
+    test_valid: bool | None = None
     proposal_applied: bool = False
     outcome: str = "unknown"
     outcome_summary: str = ""
     scope_violation_paths: list[str] = field(default_factory=list)
+    frontier_rank: int | None = None
 
 
 @dataclass(slots=True)

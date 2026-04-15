@@ -43,6 +43,9 @@ nav:
   - Architecture: architecture.md
   - Providers: providers.md
   - Benchmarks: benchmarks.md
+  - Extensions: extensions.md
+  - Official Comparison: official-comparison.md
+  - Alignment: alignment.md
   - CLI Reference: cli-reference.md
   - Experiments: experiments.md
 extra_css:

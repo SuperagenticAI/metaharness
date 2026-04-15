@@ -7,12 +7,11 @@ from typing import Any
 from pathlib import Path
 
 from ...api import optimize_harness
+from ...extensions import create_backend_from_factory
 from ...models import EvaluationResult, ValidationResult
 from ...proposer.codex_exec import CodexExecBackend
 from ...proposer.fake import FakeBackend
 from ...proposer.gemini_cli import GeminiCliBackend
-from ...proposer.opencode_run import OpenCodeRunBackend
-from ...proposer.pi_cli import PiCliBackend
 from .config import CodingToolProject, CodingToolTask
 
 
@@ -38,11 +37,23 @@ class CodingToolEvaluator:
         self.timeout_seconds = timeout_seconds
 
     def evaluate(self, workspace: Path) -> EvaluationResult:
+        # Backward-compatible API for callers that still expect one stage.
+        return self.evaluate_search(workspace)
+
+    def evaluate_search(self, workspace: Path) -> EvaluationResult:
+        return self._evaluate_tasks(workspace, self.project.tasks, label="search")
+
+    def evaluate_test(self, workspace: Path) -> EvaluationResult | None:
+        if not self.project.test_tasks:
+            return None
+        return self._evaluate_tasks(workspace, self.project.test_tasks, label="test")
+
+    def _evaluate_tasks(self, workspace: Path, tasks: list[CodingToolTask], label: str) -> EvaluationResult:
         total_weight = 0.0
         hit_weight = 0.0
         details: list[dict[str, str | int | float]] = []
 
-        for task in self.project.tasks:
+        for task in tasks:
             total_weight += task.weight
             passed, detail = self._evaluate_task(workspace, task)
             if passed:
@@ -50,7 +61,7 @@ class CodingToolEvaluator:
             details.append(detail)
 
         score = hit_weight / total_weight if total_weight else 0.0
-        summary = f"Weighted score {hit_weight:.2f}/{total_weight:.2f} = {score:.3f}"
+        summary = f"[{label}] Weighted score {hit_weight:.2f}/{total_weight:.2f} = {score:.3f}"
         failures = [detail for detail in details if detail.get("status") != "passed"]
         if failures:
             rendered = []
@@ -62,7 +73,7 @@ class CodingToolEvaluator:
             objective=score,
             metrics={"score": score, "weight_hit": hit_weight, "weight_total": total_weight},
             summary=summary,
-            metadata={"details": details},
+            metadata={"details": details, "stage": label},
         )
 
     def _evaluate_task(self, workspace: Path, task: CodingToolTask) -> tuple[bool, dict[str, str | int | float]]:
@@ -163,7 +174,11 @@ def resolve_backend_options(
     project: CodingToolProject,
     overrides: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    resolved = dict(project.backend_configs.get(name, {}))
+    resolved: dict[str, Any] = {}
+    plugin_config = project.backend_plugins.get(name)
+    if plugin_config is not None:
+        resolved.update(dict(plugin_config.options))
+    resolved.update(dict(project.backend_configs.get(name, {})))
     for key, value in (overrides or {}).items():
         if value is not None:
             resolved[key] = value
@@ -200,25 +215,6 @@ def make_backend(
             extra_args=[str(value) for value in options.get("extra_args", []) or []],
             timeout_seconds=_optional_float(options.get("proposal_timeout_seconds")),
         )
-    if name == "pi":
-        return PiCliBackend(
-            pi_binary=_optional_string(options.get("pi_binary")) or "pi",
-            model=_optional_string(options.get("model")),
-            mode=_optional_string(options.get("mode")) or "json",
-            no_session=bool(options.get("no_session", True)),
-            extra_args=[str(value) for value in options.get("extra_args", []) or []],
-            timeout_seconds=_optional_float(options.get("proposal_timeout_seconds")),
-        )
-    if name == "opencode":
-        return OpenCodeRunBackend(
-            opencode_binary=_optional_string(options.get("opencode_binary")) or "opencode",
-            model=_optional_string(options.get("model")),
-            agent=_optional_string(options.get("agent")),
-            variant=_optional_string(options.get("variant")),
-            output_format=_optional_string(options.get("output_format")) or "json",
-            extra_args=[str(value) for value in options.get("extra_args", []) or []],
-            timeout_seconds=_optional_float(options.get("proposal_timeout_seconds")),
-        )
     if name == "fake":
         if project.example_profile == "coding-tool-python-fixture":
             return _coding_tool_python_fixture_fake_backend()
@@ -227,6 +223,14 @@ def make_backend(
         if project.example_profile == "coding-tool-scaffold":
             return _coding_tool_scaffold_fake_backend()
         return FakeBackend()
+    plugin_config = project.backend_plugins.get(name)
+    if plugin_config is not None:
+        return create_backend_from_factory(
+            plugin_config.factory,
+            backend_name=name,
+            project=project,
+            options=options,
+        )
     raise ValueError(f"unknown backend: {name}")
 
 
@@ -236,6 +240,9 @@ def run_coding_tool_project(
     budget: int | None = None,
     run_name: str | None = None,
     backend_overrides: dict[str, Any] | None = None,
+    search_mode: str | None = None,
+    proposal_batch_size: int | None = None,
+    selection_policy: str | None = None,
 ):
     run_id = run_name or f"{backend_name}-run"
     return optimize_harness(
@@ -248,6 +255,9 @@ def run_coding_tool_project(
         objective=project.objective,
         constraints=project.constraints,
         allowed_write_paths=project.allowed_write_paths,
+        search_mode=search_mode or project.search_mode,
+        proposal_batch_size=proposal_batch_size if proposal_batch_size is not None else project.proposal_batch_size,
+        selection_policy=selection_policy or project.selection_policy,
     )
 
 

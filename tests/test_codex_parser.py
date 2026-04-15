@@ -18,12 +18,14 @@ class CodexParserTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             path = Path(tmpdir) / "stdout.jsonl"
             path.write_text(payload, encoding="utf-8")
-            events, final_text, changed_files = parse_codex_jsonl(path)
+            events, final_text, changed_files, telemetry = parse_codex_jsonl(path)
 
         self.assertEqual(4, len(events))
         self.assertEqual("final answer", final_text)
         self.assertEqual(["src/app.py", "README.md"], changed_files)
         self.assertEqual("pytest -q", events[1].command)
+        self.assertIn("token_usage", telemetry)
+        self.assertIn("tool_call_count", telemetry)
 
 
 if __name__ == "__main__":

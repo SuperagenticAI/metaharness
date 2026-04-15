@@ -114,7 +114,7 @@ class CodexExecBackend(ProposerBackend):
         )
 
     def collect(self, execution: ProposalExecution) -> ProposalResult:
-        events, parsed_final_text, changed_files = parse_codex_jsonl(execution.stdout_path)
+        events, parsed_final_text, changed_files, telemetry = parse_codex_jsonl(execution.stdout_path)
         final_text = parsed_final_text
         if execution.last_message_path and execution.last_message_path.exists():
             persisted = execution.last_message_path.read_text(encoding="utf-8").strip()
@@ -136,6 +136,10 @@ class CodexExecBackend(ProposerBackend):
             events=events,
             raw_stdout_path=execution.stdout_path,
             raw_stderr_path=execution.stderr_path,
+            token_usage=dict(telemetry.get("token_usage", {})),
+            files_read=dict(telemetry.get("files_read", {})),
+            files_written=dict(telemetry.get("files_written", {})),
+            tool_call_count=int(telemetry.get("tool_call_count", 0)),
             metadata={
                 "command": execution.command,
                 "returncode": execution.returncode,

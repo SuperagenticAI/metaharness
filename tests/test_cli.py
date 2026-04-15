@@ -8,6 +8,29 @@ from pathlib import Path
 
 
 class CliTests(unittest.TestCase):
+    def test_onboard_command_creates_domain_pack(self) -> None:
+        repo_root = Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as tmpdir:
+            onboarding_dir = Path(tmpdir) / "domain-onboarding"
+            env = {**os.environ, "PYTHONPATH": "src"}
+
+            onboard = subprocess.run(
+                ["python", "-m", "metaharness.cli", "onboard", str(onboarding_dir)],
+                cwd=repo_root,
+                env=env,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(0, onboard.returncode, onboard.stderr)
+            self.assertIn("Created domain onboarding pack", onboard.stdout)
+            self.assertTrue((onboarding_dir / "ONBOARDING.md").exists())
+            self.assertTrue((onboarding_dir / "domain_spec.md").exists())
+
+            onboarding_text = (onboarding_dir / "ONBOARDING.md").read_text(encoding="utf-8")
+            self.assertIn("Required Fields", onboarding_text)
+            domain_spec_text = (onboarding_dir / "domain_spec.md").read_text(encoding="utf-8")
+            self.assertIn("## Evaluation Plan", domain_spec_text)
+
     def test_scaffold_and_inspect_flow(self) -> None:
         repo_root = Path(__file__).resolve().parents[1]
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -282,27 +305,7 @@ class CliTests(unittest.TestCase):
             capture_output=True,
         )
         self.assertEqual(0, smoke_help.returncode, smoke_help.stderr)
-        self.assertIn("{codex,gemini,pi,opencode}", smoke_help.stdout)
-
-        pi_help = subprocess.run(
-            ["python", "-m", "metaharness.cli", "smoke", "pi", "--help"],
-            cwd=repo_root,
-            env=env,
-            text=True,
-            capture_output=True,
-        )
-        self.assertEqual(0, pi_help.returncode, pi_help.stderr)
-        self.assertIn("--proposal-timeout", pi_help.stdout)
-
-        opencode_help = subprocess.run(
-            ["python", "-m", "metaharness.cli", "smoke", "opencode", "--help"],
-            cwd=repo_root,
-            env=env,
-            text=True,
-            capture_output=True,
-        )
-        self.assertEqual(0, opencode_help.returncode, opencode_help.stderr)
-        self.assertIn("--proposal-timeout", opencode_help.stdout)
+        self.assertIn("{codex,gemini}", smoke_help.stdout)
 
     def test_experiment_command_writes_results(self) -> None:
         repo_root = Path(__file__).resolve().parents[1]

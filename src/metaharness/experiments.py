@@ -25,8 +25,12 @@ _TRIAL_TSV_COLUMNS = (
     "best_candidate_id",
     "best_candidate_outcome",
     "best_objective",
+    "best_test_objective",
     "baseline_objective",
     "improved",
+    "search_mode",
+    "selection_policy",
+    "proposal_batch_size",
     "candidate_count",
     "keep_candidate_count",
     "discard_candidate_count",
@@ -50,6 +54,7 @@ _AGGREGATE_TSV_COLUMNS = (
     "improved_count",
     "success_rate",
     "mean_best_objective",
+    "mean_best_test_objective",
     "max_best_objective",
     "mean_duration_seconds",
     "mean_time_to_first_improvement_seconds",
@@ -75,6 +80,7 @@ def run_experiment_matrix(
     models: Sequence[str] | None = None,
     results_dir: str | Path,
     backend_overrides: dict[str, Any] | None = None,
+    project_overrides: dict[str, Any] | None = None,
     config_path: str | Path | None = None,
     config_payload: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
@@ -108,6 +114,9 @@ def run_experiment_matrix(
                             budget=budget,
                             run_name=run_name,
                             backend_overrides=_per_run_overrides(backend_overrides, backend, model),
+                            search_mode=_project_override(project_overrides, "search_mode"),
+                            proposal_batch_size=_project_override(project_overrides, "proposal_batch_size"),
+                            selection_policy=_project_override(project_overrides, "selection_policy"),
                         )
                         run_summary = summarize_run(run_result.run_dir)
                         run_dirs.append(str(run_result.run_dir))
@@ -190,6 +199,7 @@ def aggregate_experiment_trials(trial_rows: Sequence[dict[str, Any]]) -> list[di
                 "improved_count": improved_count,
                 "success_rate": _ratio(improved_count, trial_count),
                 "mean_best_objective": _mean(row.get("best_objective") for row in rows),
+                "mean_best_test_objective": _mean(row.get("best_test_objective") for row in rows),
                 "max_best_objective": _max(row.get("best_objective") for row in rows),
                 "mean_duration_seconds": _mean(row.get("duration_seconds") for row in rows),
                 "mean_time_to_first_improvement_seconds": _mean(
@@ -280,8 +290,12 @@ def _trial_row(
         "best_candidate_id": run_summary.get("best_candidate_id"),
         "best_candidate_outcome": run_summary.get("best_candidate_outcome"),
         "best_objective": run_summary.get("best_objective"),
+        "best_test_objective": run_summary.get("best_test_objective"),
         "baseline_objective": run_summary.get("baseline_objective"),
         "improved": run_summary.get("improved"),
+        "search_mode": run_summary.get("search_mode"),
+        "selection_policy": run_summary.get("selection_policy"),
+        "proposal_batch_size": run_summary.get("proposal_batch_size"),
         "candidate_count": run_summary.get("candidate_count"),
         "keep_candidate_count": run_summary.get("keep_candidate_count"),
         "discard_candidate_count": run_summary.get("discard_candidate_count"),
@@ -301,10 +315,10 @@ def _resolve_models(
     resolved_options: dict[str, Any],
     models: Sequence[str] | None,
 ) -> list[str | None]:
-    if backend not in {"codex", "gemini", "pi", "opencode"}:
-        return [None]
     if models:
         return [str(value) for value in models]
+    if backend not in {"codex", "gemini"}:
+        return [None]
     model = resolved_options.get("model")
     if model:
         return [str(model)]
@@ -317,9 +331,15 @@ def _per_run_overrides(
     model: str | None,
 ) -> dict[str, Any] | None:
     overrides = dict(backend_overrides or {})
-    if backend in {"codex", "gemini", "pi", "opencode"} and model is not None:
+    if backend != "fake" and model is not None:
         overrides["model"] = model
     return overrides or None
+
+
+def _project_override(project_overrides: dict[str, Any] | None, key: str):
+    if not project_overrides:
+        return None
+    return project_overrides.get(key)
 
 
 def _build_run_name(

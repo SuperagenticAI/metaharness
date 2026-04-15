@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Sequence
 
 from ..bootstrap import collect_environment_bootstrap
+from ..domain import DomainAdapterProtocol
 from ..models import (
     AgentInstructions,
     CandidateRecord,
@@ -12,7 +13,6 @@ from ..models import (
 )
 from ..proposer.base import ProposerBackend
 from ..store.filesystem import FilesystemRunStore
-from .protocols import EvaluatorProtocol, ValidatorProtocol
 
 
 class MetaHarnessEngine:
@@ -20,23 +20,31 @@ class MetaHarnessEngine:
         self,
         baseline: Path,
         proposer: ProposerBackend,
-        evaluator: EvaluatorProtocol,
-        validator: ValidatorProtocol,
+        domain_adapter: DomainAdapterProtocol,
         run_dir: Path,
         budget: int,
         objective: str,
         constraints: Sequence[str] | None = None,
         allowed_write_paths: Sequence[str] | None = None,
+        search_mode: str = "hill-climb",
+        proposal_batch_size: int = 1,
+        selection_policy: str = "single",
     ) -> None:
         self.baseline = baseline.resolve()
         self.proposer = proposer
-        self.evaluator = evaluator
-        self.validator = validator
+        self.domain_adapter = domain_adapter
         self.run_dir = run_dir.resolve()
         self.budget = budget
         self.objective = objective
         self.constraints = list(constraints or [])
         self.allowed_write_paths = [self._normalize_allowed_path(value) for value in (allowed_write_paths or []) if str(value).strip()]
+        self.search_mode = search_mode
+        self.proposal_batch_size = max(1, int(proposal_batch_size))
+        self.selection_policy = selection_policy
+        if self.search_mode not in {"hill-climb", "frontier"}:
+            raise ValueError(f"unsupported search_mode: {self.search_mode}")
+        if self.selection_policy not in {"single", "pareto"}:
+            raise ValueError(f"unsupported selection_policy: {self.selection_policy}")
         self.store = FilesystemRunStore(self.run_dir)
 
     def _build_instructions(self, parent: CandidateRecord) -> AgentInstructions:
@@ -75,19 +83,31 @@ class MetaHarnessEngine:
                 "proposer": self.proposer.name,
                 "baseline": str(self.baseline),
                 "allowed_write_paths": self.allowed_write_paths,
+                "search_mode": self.search_mode,
+                "proposal_batch_size": self.proposal_batch_size,
+                "selection_policy": self.selection_policy,
             }
         )
 
         baseline = self.store.materialize_baseline(self.baseline)
         baseline.proposal_applied = True
-        baseline_validation = self.validator.validate(baseline.workspace_dir)
+        baseline_validation = self.domain_adapter.validate(baseline.workspace_dir)
         self.store.write_validation_result(baseline.candidate_id, baseline_validation)
         baseline.valid = baseline_validation.ok
         if baseline.valid:
-            baseline_eval = self.evaluator.evaluate(baseline.workspace_dir)
-            self.store.write_evaluation_result(baseline.candidate_id, baseline_eval)
-            baseline.objective = baseline_eval.objective
+            baseline_eval = self.domain_adapter.evaluate_search(baseline.workspace_dir)
+            self.store.write_search_evaluation_result(baseline.candidate_id, baseline_eval)
+            baseline.search_objective = baseline_eval.objective
+            baseline.search_metrics = dict(baseline_eval.metrics)
+            baseline.objective = baseline.search_objective
+            baseline_test = self.domain_adapter.evaluate_test(baseline.workspace_dir)
+            if baseline_test is not None:
+                self.store.write_test_evaluation_result(baseline.candidate_id, baseline_test)
+                baseline.test_valid = True
+                baseline.test_objective = baseline_test.objective
+                baseline.test_metrics = dict(baseline_test.metrics)
         else:
+            baseline.search_objective = float("-inf")
             baseline.objective = float("-inf")
         baseline.outcome = "baseline"
         baseline.outcome_summary = "Baseline candidate."
@@ -98,73 +118,30 @@ class MetaHarnessEngine:
 
         for _ in range(self.budget):
             parent = best
-            candidate = self.store.materialize_candidate(parent)
-            instructions = self._build_instructions(parent)
-            bootstrap = collect_environment_bootstrap(candidate.workspace_dir)
-            proposal_request = self.store.write_instruction_bundle(
-                candidate=candidate,
-                parent=parent,
-                instructions=instructions,
-                proposer_name=self.proposer.name,
-                bootstrap=bootstrap,
-            )
-            execution = self.proposer.invoke(self.proposer.prepare(proposal_request))
-            proposal_result = self.proposer.collect(execution)
-            diff_metadata = self.store.capture_workspace_diff(parent=best, candidate=candidate)
-            proposal_result.changed_files = sorted(
-                set(proposal_result.changed_files) | set(diff_metadata["workspace_changed_files"])
-            )
-            proposal_result.metadata = {
-                **proposal_result.metadata,
-                "workspace_diff_path": diff_metadata["workspace_diff_path"],
-                "workspace_changes_path": diff_metadata["workspace_changes_path"],
-                "workspace_change_count": diff_metadata["workspace_change_count"],
-            }
-            workspace_change_count = int(diff_metadata["workspace_change_count"])
-            candidate.proposal_applied = proposal_result.applied
-            self.store.write_proposal_result(candidate.candidate_id, proposal_result)
+            batch = [
+                self.store.materialize_candidate(parent)
+                for _ in range(self._effective_batch_size())
+            ]
+            for candidate in batch:
+                self._evaluate_candidate(parent=parent, candidate=candidate)
+                self.store.write_candidate_manifest(candidate)
+                candidates.append(candidate.candidate_id)
 
-            if not proposal_result.applied:
-                candidate.valid = False
-                candidate.objective = float("-inf")
-                candidate.outcome = self._classify_failed_proposal(proposal_result)
-                candidate.outcome_summary = proposal_result.summary
-            elif violation_paths := self._scope_violations(proposal_result.changed_files):
-                candidate.valid = False
-                candidate.objective = float("-inf")
-                candidate.outcome = "scope-violation"
-                candidate.scope_violation_paths = violation_paths
-                candidate.outcome_summary = (
-                    "Changed files outside the allowed write scope: "
-                    + ", ".join(violation_paths)
-                )
-            elif workspace_change_count == 0:
-                candidate.valid = parent.valid
-                candidate.objective = parent.objective
-                candidate.outcome = "no-change"
-                candidate.outcome_summary = "No workspace changes detected relative to the parent candidate."
-            else:
-                validation = self.validator.validate(candidate.workspace_dir)
-                candidate.valid = validation.ok
-                self.store.write_validation_result(candidate.candidate_id, validation)
-                if validation.ok:
-                    evaluation = self.evaluator.evaluate(candidate.workspace_dir)
-                    candidate.objective = evaluation.objective
-                    self.store.write_evaluation_result(candidate.candidate_id, evaluation)
-                    if parent.objective is None or candidate.objective > parent.objective:
-                        candidate.outcome = "keep"
-                        candidate.outcome_summary = self._keep_summary(parent, candidate)
-                        best = candidate
-                    else:
-                        candidate.outcome = "discard"
-                        candidate.outcome_summary = self._discard_summary(parent, candidate)
-                else:
-                    candidate.objective = float("-inf")
+            selected = self._select_next_parent(parent=parent, batch=batch)
+            if selected is not parent:
+                selected.outcome = "keep"
+                selected.outcome_summary = self._keep_summary(parent, selected)
+                self.store.write_candidate_manifest(selected)
+                best = selected
+            for candidate in batch:
+                if candidate.candidate_id == best.candidate_id:
+                    continue
+                if candidate.outcome in {"crash", "timeout", "scope-violation", "no-change"}:
+                    continue
+                if candidate.valid:
                     candidate.outcome = "discard"
-                    candidate.outcome_summary = validation.summary
-
-            self.store.write_candidate_manifest(candidate)
-            candidates.append(candidate.candidate_id)
+                    candidate.outcome_summary = self._discard_summary(parent, candidate)
+                    self.store.write_candidate_manifest(candidate)
 
         self.store.write_index(
             {
@@ -182,6 +159,138 @@ class MetaHarnessEngine:
             best_objective=best.objective if best.objective is not None else float("-inf"),
             candidate_ids=candidates,
         )
+
+    def _evaluate_candidate(self, parent: CandidateRecord, candidate: CandidateRecord) -> None:
+        instructions = self._build_instructions(parent)
+        bootstrap = collect_environment_bootstrap(candidate.workspace_dir)
+        proposal_request = self.store.write_instruction_bundle(
+            candidate=candidate,
+            parent=parent,
+            instructions=instructions,
+            proposer_name=self.proposer.name,
+            bootstrap=bootstrap,
+        )
+        execution = self.proposer.invoke(self.proposer.prepare(proposal_request))
+        proposal_result = self.proposer.collect(execution)
+        diff_metadata = self.store.capture_workspace_diff(parent=parent, candidate=candidate)
+        proposal_result.changed_files = sorted(
+            set(proposal_result.changed_files) | set(diff_metadata["workspace_changed_files"])
+        )
+        proposal_result.metadata = {
+            **proposal_result.metadata,
+            "workspace_diff_path": diff_metadata["workspace_diff_path"],
+            "workspace_changes_path": diff_metadata["workspace_changes_path"],
+            "workspace_change_count": diff_metadata["workspace_change_count"],
+        }
+        workspace_change_count = int(diff_metadata["workspace_change_count"])
+        candidate.proposal_applied = proposal_result.applied
+        self.store.write_proposal_result(candidate.candidate_id, proposal_result)
+
+        if not proposal_result.applied:
+            candidate.valid = False
+            candidate.search_objective = float("-inf")
+            candidate.objective = float("-inf")
+            candidate.outcome = self._classify_failed_proposal(proposal_result)
+            candidate.outcome_summary = proposal_result.summary
+            return
+
+        if violation_paths := self._scope_violations(proposal_result.changed_files):
+            candidate.valid = False
+            candidate.search_objective = float("-inf")
+            candidate.objective = float("-inf")
+            candidate.outcome = "scope-violation"
+            candidate.scope_violation_paths = violation_paths
+            candidate.outcome_summary = (
+                "Changed files outside the allowed write scope: "
+                + ", ".join(violation_paths)
+            )
+            return
+
+        if workspace_change_count == 0:
+            candidate.valid = parent.valid
+            candidate.search_objective = parent.search_objective
+            candidate.test_objective = parent.test_objective
+            candidate.search_metrics = dict(parent.search_metrics)
+            candidate.test_metrics = dict(parent.test_metrics)
+            candidate.objective = parent.objective
+            candidate.test_valid = parent.test_valid
+            candidate.outcome = "no-change"
+            candidate.outcome_summary = "No workspace changes detected relative to the parent candidate."
+            return
+
+        validation = self.domain_adapter.validate(candidate.workspace_dir)
+        candidate.valid = validation.ok
+        self.store.write_validation_result(candidate.candidate_id, validation)
+        if not validation.ok:
+            candidate.search_objective = float("-inf")
+            candidate.objective = float("-inf")
+            candidate.outcome = "discard"
+            candidate.outcome_summary = validation.summary
+            return
+
+        search_eval = self.domain_adapter.evaluate_search(candidate.workspace_dir)
+        self.store.write_search_evaluation_result(candidate.candidate_id, search_eval)
+        candidate.search_objective = search_eval.objective
+        candidate.search_metrics = dict(search_eval.metrics)
+        candidate.objective = candidate.search_objective
+        candidate.outcome = "unknown"
+        candidate.outcome_summary = ""
+
+        test_eval = self.domain_adapter.evaluate_test(candidate.workspace_dir)
+        if test_eval is not None:
+            self.store.write_test_evaluation_result(candidate.candidate_id, test_eval)
+            candidate.test_valid = True
+            candidate.test_objective = test_eval.objective
+            candidate.test_metrics = dict(test_eval.metrics)
+
+    def _effective_batch_size(self) -> int:
+        if self.search_mode == "hill-climb":
+            return self.proposal_batch_size
+        return max(2, self.proposal_batch_size)
+
+    def _select_next_parent(self, parent: CandidateRecord, batch: Sequence[CandidateRecord]) -> CandidateRecord:
+        valid_improving = [
+            candidate
+            for candidate in batch
+            if candidate.valid
+            and candidate.search_objective is not None
+            and (parent.search_objective is None or candidate.search_objective > parent.search_objective)
+        ]
+        if not valid_improving:
+            return parent
+        if self.selection_policy == "pareto":
+            return self._select_pareto(valid_improving)
+        return max(valid_improving, key=lambda c: c.search_objective if c.search_objective is not None else float("-inf"))
+
+    def _select_pareto(self, candidates: Sequence[CandidateRecord]) -> CandidateRecord:
+        points = []
+        for candidate in candidates:
+            score = candidate.search_objective if candidate.search_objective is not None else float("-inf")
+            cost = self._secondary_cost(candidate)
+            points.append((candidate, score, cost))
+
+        frontier = []
+        for candidate, score, cost in points:
+            dominated = False
+            for _, other_score, other_cost in points:
+                if other_score >= score and other_cost <= cost and (other_score > score or other_cost < cost):
+                    dominated = True
+                    break
+            if not dominated:
+                frontier.append((candidate, score, cost))
+
+        frontier.sort(key=lambda item: (item[1], -item[2]), reverse=True)
+        for rank, (candidate, _, _) in enumerate(frontier, start=1):
+            candidate.frontier_rank = rank
+        return frontier[0][0]
+
+    @staticmethod
+    def _secondary_cost(candidate: CandidateRecord) -> float:
+        for key in ("context_len", "context_chars", "context_cost", "prompt_len"):
+            value = candidate.search_metrics.get(key)
+            if value is not None:
+                return float(value)
+        return float("inf")
 
     @staticmethod
     def _classify_failed_proposal(result) -> str:

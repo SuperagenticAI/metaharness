@@ -62,32 +62,6 @@ Local run directory names used for these runs:
 These runs are useful for proving that a provider integration launches and produces inspectable artifacts.
 They should not be treated as benchmark evidence on the same level as the Codex runs above.
 
-### OpenCode
-
-| Target | Run ID | Outcome | Notes |
-| --- | --- | --- | --- |
-| `python_fixture_benchmark` | `opencode-smoke` | crash | sandboxed run failed before proposal execution because OpenCode attempted to write under `~/.local/share/opencode/` |
-| `python_fixture_benchmark` | `opencode-smoke-escalated` | no-change | OpenCode completed the run but made no edits and stayed at the baseline objective `0.050` |
-
-Important observations:
-
-- the OpenCode backend is implemented and runnable through `metaharness`
-- the first sandboxed run exposed an environment-level logging path issue
-- the successful rerun outside the sandbox completed cleanly but only performed read actions
-- stderr showed `permission requested: external_directory (/src/*); auto-rejecting`, which is the main current blocker to getting a meaningful candidate from this benchmark setup
-
-### Pi
-
-| Target | Run ID | Outcome | Notes |
-| --- | --- | --- | --- |
-| `python_fixture_benchmark` | `pi-smoke` | crash | Pi launched, but no models were configured. stderr requested provider API keys or `~/.pi/agent/models.json` |
-
-Important observations:
-
-- the Pi backend is implemented and the CLI is callable through `metaharness`
-- the current blocker is provider configuration, not parser or process integration
-- there is still no successful real Pi benchmark run recorded in this repository
-
 ### Gemini
 
 | Target | Run ID | Outcome | Notes |

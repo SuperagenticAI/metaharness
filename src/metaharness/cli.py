@@ -16,8 +16,6 @@ from .integrations.coding_tool.config import load_coding_tool_project
 from .integrations.coding_tool.runtime import resolve_backend_options, run_coding_tool_project
 from .proposer.codex_exec import probe_codex_cli, probe_ollama_server
 from .proposer.gemini_cli import probe_gemini_cli
-from .proposer.opencode_run import probe_opencode_cli
-from .proposer.pi_cli import probe_pi_cli
 from .reporting import (
     candidate_ledger,
     compare_runs,
@@ -30,7 +28,7 @@ from .reporting import (
     summarize_run,
     summary_tsv_columns,
 )
-from .scaffold import create_coding_tool_scaffold
+from .scaffold import create_coding_tool_scaffold, create_domain_onboarding_pack
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -46,9 +44,12 @@ def main(argv: list[str] | None = None) -> int:
         default="standard",
     )
 
+    onboard_parser = subparsers.add_parser("onboard", help="Create a domain onboarding pack.")
+    onboard_parser.add_argument("target_dir")
+
     run_parser = subparsers.add_parser("run", help="Run an optimization project.")
     run_parser.add_argument("project_dir")
-    run_parser.add_argument("--backend", choices=["fake", "codex", "gemini", "pi", "opencode"], default="fake")
+    run_parser.add_argument("--backend", default="fake")
     run_parser.add_argument("--budget", type=int, default=None)
     run_parser.add_argument("--run-name", default=None)
     run_parser.add_argument("--hosted", action="store_true")
@@ -56,11 +57,14 @@ def main(argv: list[str] | None = None) -> int:
     run_parser.add_argument("--local-provider", choices=["ollama", "lmstudio"], default=None)
     run_parser.add_argument("--model", default=None)
     run_parser.add_argument("--proposal-timeout", type=float, default=None)
+    run_parser.add_argument("--search-mode", choices=["hill-climb", "frontier"], default=None)
+    run_parser.add_argument("--proposal-batch-size", type=int, default=None)
+    run_parser.add_argument("--selection-policy", choices=["single", "pareto"], default=None)
 
     experiment_parser = subparsers.add_parser("experiment", help="Run a benchmark x backend x budget x trial matrix.")
     experiment_parser.add_argument("project_dirs", nargs="*")
     experiment_parser.add_argument("--config", default=None)
-    experiment_parser.add_argument("--backend", action="append", choices=["fake", "codex", "gemini", "pi", "opencode"])
+    experiment_parser.add_argument("--backend", action="append")
     experiment_parser.add_argument("--budget", action="append", type=int, dest="budgets")
     experiment_parser.add_argument("--trials", type=int, default=None)
     experiment_parser.add_argument("--model", action="append", dest="models")
@@ -71,6 +75,9 @@ def main(argv: list[str] | None = None) -> int:
     experiment_parser.add_argument("--oss", action="store_true")
     experiment_parser.add_argument("--local-provider", choices=["ollama", "lmstudio"], default=None)
     experiment_parser.add_argument("--proposal-timeout", type=float, default=None)
+    experiment_parser.add_argument("--search-mode", choices=["hill-climb", "frontier"], default=None)
+    experiment_parser.add_argument("--proposal-batch-size", type=int, default=None)
+    experiment_parser.add_argument("--selection-policy", choices=["single", "pareto"], default=None)
 
     smoke_parser = subparsers.add_parser("smoke", help="Run a backend smoke check.")
     smoke_subparsers = smoke_parser.add_subparsers(dest="smoke_backend", required=True)
@@ -85,6 +92,9 @@ def main(argv: list[str] | None = None) -> int:
     smoke_codex_parser.add_argument("--local-provider", choices=["ollama", "lmstudio"], default=None)
     smoke_codex_parser.add_argument("--model", default=None)
     smoke_codex_parser.add_argument("--proposal-timeout", type=float, default=None)
+    smoke_codex_parser.add_argument("--search-mode", choices=["hill-climb", "frontier"], default=None)
+    smoke_codex_parser.add_argument("--proposal-batch-size", type=int, default=None)
+    smoke_codex_parser.add_argument("--selection-policy", choices=["single", "pareto"], default=None)
 
     smoke_gemini_parser = smoke_subparsers.add_parser("gemini", help="Probe and optionally run Gemini CLI.")
     smoke_gemini_parser.add_argument("project_dir")
@@ -93,22 +103,9 @@ def main(argv: list[str] | None = None) -> int:
     smoke_gemini_parser.add_argument("--run-name", default="gemini-smoke")
     smoke_gemini_parser.add_argument("--model", default=None)
     smoke_gemini_parser.add_argument("--proposal-timeout", type=float, default=None)
-
-    smoke_pi_parser = smoke_subparsers.add_parser("pi", help="Probe and optionally run Pi.")
-    smoke_pi_parser.add_argument("project_dir")
-    smoke_pi_parser.add_argument("--probe-only", action="store_true")
-    smoke_pi_parser.add_argument("--budget", type=int, default=1)
-    smoke_pi_parser.add_argument("--run-name", default="pi-smoke")
-    smoke_pi_parser.add_argument("--model", default=None)
-    smoke_pi_parser.add_argument("--proposal-timeout", type=float, default=None)
-
-    smoke_opencode_parser = smoke_subparsers.add_parser("opencode", help="Probe and optionally run OpenCode.")
-    smoke_opencode_parser.add_argument("project_dir")
-    smoke_opencode_parser.add_argument("--probe-only", action="store_true")
-    smoke_opencode_parser.add_argument("--budget", type=int, default=1)
-    smoke_opencode_parser.add_argument("--run-name", default="opencode-smoke")
-    smoke_opencode_parser.add_argument("--model", default=None)
-    smoke_opencode_parser.add_argument("--proposal-timeout", type=float, default=None)
+    smoke_gemini_parser.add_argument("--search-mode", choices=["hill-climb", "frontier"], default=None)
+    smoke_gemini_parser.add_argument("--proposal-batch-size", type=int, default=None)
+    smoke_gemini_parser.add_argument("--selection-policy", choices=["single", "pareto"], default=None)
 
     inspect_parser = subparsers.add_parser("inspect", help="Inspect a run directory.")
     inspect_parser.add_argument("run_dir")
@@ -133,6 +130,8 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "scaffold":
         return _cmd_scaffold(args.template, Path(args.target_dir), args.profile)
+    if args.command == "onboard":
+        return _cmd_onboard(Path(args.target_dir))
     if args.command == "run":
         return _cmd_run(
             project_dir=Path(args.project_dir),
@@ -140,6 +139,7 @@ def main(argv: list[str] | None = None) -> int:
             budget=args.budget,
             run_name=args.run_name,
             backend_overrides=_backend_overrides_from_args(args),
+            project_overrides=_project_overrides_from_args(args),
         )
     if args.command == "experiment":
         return _cmd_experiment(
@@ -153,6 +153,7 @@ def main(argv: list[str] | None = None) -> int:
             json_output=args.json_output,
             tsv_output=args.tsv_output,
             backend_overrides=_backend_overrides_from_args(args),
+            project_overrides=_project_overrides_from_args(args),
         )
     if args.command == "smoke":
         if args.smoke_backend == "codex":
@@ -162,6 +163,7 @@ def main(argv: list[str] | None = None) -> int:
                 budget=args.budget,
                 run_name=args.run_name,
                 backend_overrides=_backend_overrides_from_args(args),
+                project_overrides=_project_overrides_from_args(args),
             )
         if args.smoke_backend == "gemini":
             return _cmd_smoke_gemini(
@@ -170,22 +172,7 @@ def main(argv: list[str] | None = None) -> int:
                 budget=args.budget,
                 run_name=args.run_name,
                 backend_overrides=_backend_overrides_from_args(args),
-            )
-        if args.smoke_backend == "pi":
-            return _cmd_smoke_pi(
-                project_dir=Path(args.project_dir),
-                probe_only=args.probe_only,
-                budget=args.budget,
-                run_name=args.run_name,
-                backend_overrides=_backend_overrides_from_args(args),
-            )
-        if args.smoke_backend == "opencode":
-            return _cmd_smoke_opencode(
-                project_dir=Path(args.project_dir),
-                probe_only=args.probe_only,
-                budget=args.budget,
-                run_name=args.run_name,
-                backend_overrides=_backend_overrides_from_args(args),
+                project_overrides=_project_overrides_from_args(args),
             )
     if args.command == "inspect":
         return _cmd_inspect(Path(args.run_dir), args.json_output)
@@ -208,12 +195,20 @@ def _cmd_scaffold(template: str, target_dir: Path, profile: str) -> int:
     return 0
 
 
+def _cmd_onboard(target_dir: Path) -> int:
+    written = create_domain_onboarding_pack(target_dir)
+    print(f"Created domain onboarding pack in {target_dir}")
+    print(f"Wrote {len(written)} files")
+    return 0
+
+
 def _cmd_run(
     project_dir: Path,
     backend: str,
     budget: int | None,
     run_name: str | None,
     backend_overrides: dict[str, Any] | None,
+    project_overrides: dict[str, Any] | None,
 ) -> int:
     project = _load_project(project_dir)
     result = run_coding_tool_project(
@@ -222,6 +217,9 @@ def _cmd_run(
         budget=budget,
         run_name=run_name,
         backend_overrides=backend_overrides,
+        search_mode=_get_project_override(project_overrides, "search_mode"),
+        proposal_batch_size=_get_project_override(project_overrides, "proposal_batch_size"),
+        selection_policy=_get_project_override(project_overrides, "selection_policy"),
     )
     print(f"run_dir={result.run_dir}")
     print(f"best_candidate_id={result.best_candidate_id}")
@@ -241,6 +239,7 @@ def _cmd_experiment(
     json_output: bool,
     tsv_output: bool,
     backend_overrides: dict[str, Any] | None,
+    project_overrides: dict[str, Any] | None,
 ) -> int:
     spec = load_experiment_spec(config_path) if config_path is not None else None
     resolved = resolve_experiment_inputs(
@@ -265,6 +264,7 @@ def _cmd_experiment(
         models=resolved["models"],
         results_dir=resolved_results_dir,
         backend_overrides=resolved["backend_overrides"],
+        project_overrides=project_overrides,
         config_path=resolved["config_path"],
         config_payload=resolved["config_payload"],
     )
@@ -290,6 +290,7 @@ def _cmd_smoke_codex(
     budget: int,
     run_name: str,
     backend_overrides: dict[str, Any] | None,
+    project_overrides: dict[str, Any] | None,
 ) -> int:
     project = _load_project(project_dir)
     resolved_options = resolve_backend_options("codex", project, overrides=backend_overrides)
@@ -334,6 +335,9 @@ def _cmd_smoke_codex(
         budget=budget,
         run_name=run_name,
         backend_overrides=backend_overrides,
+        search_mode=_get_project_override(project_overrides, "search_mode"),
+        proposal_batch_size=_get_project_override(project_overrides, "proposal_batch_size"),
+        selection_policy=_get_project_override(project_overrides, "selection_policy"),
     )
     print(f"run_dir={result.run_dir}")
     print(f"best_candidate_id={result.best_candidate_id}")
@@ -348,6 +352,7 @@ def _cmd_smoke_gemini(
     budget: int,
     run_name: str,
     backend_overrides: dict[str, Any] | None,
+    project_overrides: dict[str, Any] | None,
 ) -> int:
     project = _load_project(project_dir)
     resolved_options = resolve_backend_options("gemini", project, overrides=backend_overrides)
@@ -381,96 +386,9 @@ def _cmd_smoke_gemini(
         budget=budget,
         run_name=run_name,
         backend_overrides=backend_overrides,
-    )
-    print(f"run_dir={result.run_dir}")
-    print(f"best_candidate_id={result.best_candidate_id}")
-    print(f"best_objective={result.best_objective:.3f}")
-    print(f"best_workspace_dir={result.best_workspace_dir}")
-    return 0
-
-
-def _cmd_smoke_pi(
-    project_dir: Path,
-    probe_only: bool,
-    budget: int,
-    run_name: str,
-    backend_overrides: dict[str, Any] | None,
-) -> int:
-    project = _load_project(project_dir)
-    resolved_options = resolve_backend_options("pi", project, overrides=backend_overrides)
-    pi_binary = str(resolved_options.get("pi_binary") or "pi")
-    probe = probe_pi_cli(pi_binary=pi_binary)
-    if not probe["ok"]:
-        error = probe.get("error") or "Pi probe failed."
-        raise SystemExit(f"Pi unavailable: {error}")
-
-    print(f"pi_binary={probe['resolved_binary']}")
-    print(f"pi_version={probe['version'] or 'unknown'}")
-    if probe.get("raw_output"):
-        print(f"pi_probe_output={probe['raw_output']}")
-    if resolved_options.get("model"):
-        print(f"pi_model={resolved_options['model']}")
-    if resolved_options.get("mode"):
-        print(f"pi_mode={resolved_options['mode']}")
-    if resolved_options.get("proposal_timeout_seconds") is not None:
-        print(f"pi_proposal_timeout={resolved_options['proposal_timeout_seconds']}")
-
-    if probe_only:
-        return 0
-
-    result = run_coding_tool_project(
-        project=project,
-        backend_name="pi",
-        budget=budget,
-        run_name=run_name,
-        backend_overrides=backend_overrides,
-    )
-    print(f"run_dir={result.run_dir}")
-    print(f"best_candidate_id={result.best_candidate_id}")
-    print(f"best_objective={result.best_objective:.3f}")
-    print(f"best_workspace_dir={result.best_workspace_dir}")
-    return 0
-
-
-def _cmd_smoke_opencode(
-    project_dir: Path,
-    probe_only: bool,
-    budget: int,
-    run_name: str,
-    backend_overrides: dict[str, Any] | None,
-) -> int:
-    project = _load_project(project_dir)
-    resolved_options = resolve_backend_options("opencode", project, overrides=backend_overrides)
-    opencode_binary = str(resolved_options.get("opencode_binary") or "opencode")
-    probe = probe_opencode_cli(opencode_binary=opencode_binary)
-    if not probe["ok"]:
-        error = probe.get("error") or "OpenCode probe failed."
-        raise SystemExit(f"OpenCode unavailable: {error}")
-
-    print(f"opencode_binary={probe['resolved_binary']}")
-    print(f"opencode_version={probe['version'] or 'unknown'}")
-    if probe.get("raw_output"):
-        print(f"opencode_probe_output={probe['raw_output']}")
-    if resolved_options.get("model"):
-        print(f"opencode_model={resolved_options['model']}")
-    if resolved_options.get("agent"):
-        print(f"opencode_agent={resolved_options['agent']}")
-    if resolved_options.get("variant"):
-        print(f"opencode_variant={resolved_options['variant']}")
-    if resolved_options.get("output_format"):
-        print(f"opencode_output_format={resolved_options['output_format']}")
-    if resolved_options.get("proposal_timeout_seconds") is not None:
-        print(f"opencode_proposal_timeout={resolved_options['proposal_timeout_seconds']}")
-
-    if probe_only:
-        return 0
-
-    result = run_coding_tool_project(
-        project=project,
-        backend_name="opencode",
-        budget=budget,
-        run_name=run_name,
-        backend_overrides=backend_overrides,
+        search_mode=_get_project_override(project_overrides, "search_mode"),
+        proposal_batch_size=_get_project_override(project_overrides, "proposal_batch_size"),
+        selection_policy=_get_project_override(project_overrides, "selection_policy"),
     )
     print(f"run_dir={result.run_dir}")
     print(f"best_candidate_id={result.best_candidate_id}")
@@ -609,6 +527,22 @@ def _backend_overrides_from_args(args: argparse.Namespace) -> dict[str, Any] | N
     }
     filtered = {key: value for key, value in overrides.items() if value is not None}
     return filtered or None
+
+
+def _project_overrides_from_args(args: argparse.Namespace) -> dict[str, Any] | None:
+    overrides = {
+        "search_mode": getattr(args, "search_mode", None),
+        "proposal_batch_size": getattr(args, "proposal_batch_size", None),
+        "selection_policy": getattr(args, "selection_policy", None),
+    }
+    filtered = {key: value for key, value in overrides.items() if value is not None}
+    return filtered or None
+
+
+def _get_project_override(project_overrides: dict[str, Any] | None, key: str):
+    if not project_overrides:
+        return None
+    return project_overrides.get(key)
 
 
 def _output_mode(json_output: bool, tsv_output: bool) -> str:

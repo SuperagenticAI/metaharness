@@ -17,6 +17,20 @@ def create_coding_tool_scaffold(target_dir: Path, profile: str = "standard") -> 
     return written
 
 
+def create_domain_onboarding_pack(target_dir: Path) -> list[Path]:
+    files = {
+        "ONBOARDING.md": _domain_onboarding_markdown(),
+        "domain_spec.md": _domain_spec_template(),
+    }
+    written: list[Path] = []
+    for relative_path, content in files.items():
+        path = target_dir / relative_path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+        written.append(path)
+    return written
+
+
 def build_coding_tool_scaffold(profile: str) -> dict[str, str]:
     if profile == "standard":
         return _standard_scaffold_files()
@@ -71,7 +85,11 @@ def _standard_scaffold_files() -> dict[str, str]:
                 }
               },
               "example_profile": "coding-tool-scaffold",
-              "default_budget": 1
+              "default_budget": 1,
+              "search_mode": "hill-climb",
+              "proposal_batch_size": 1,
+              "selection_policy": "single",
+              "test_tasks_file": null
             }
             """
         ),
@@ -207,7 +225,11 @@ def _local_oss_smoke_scaffold_files() -> dict[str, str]:
                 }
               },
               "example_profile": "coding-tool-scaffold",
-              "default_budget": 1
+              "default_budget": 1,
+              "search_mode": "hill-climb",
+              "proposal_batch_size": 1,
+              "selection_policy": "single",
+              "test_tasks_file": null
             }
             """
         ),
@@ -305,7 +327,11 @@ def _local_oss_medium_scaffold_files() -> dict[str, str]:
                 }
               },
               "example_profile": "coding-tool-scaffold",
-              "default_budget": 1
+              "default_budget": 1,
+              "search_mode": "hill-climb",
+              "proposal_batch_size": 1,
+              "selection_policy": "single",
+              "test_tasks_file": null
             }
             """
         ),
@@ -481,3 +507,113 @@ def _shared_baseline_files(include_bootstrap: bool, include_test: bool) -> dict[
             """
         )
     return files
+
+
+def _domain_onboarding_markdown() -> str:
+    return dedent(
+        """\
+        # MetaHarness Domain Onboarding
+
+        Use this file when adapting `metaharness` to a new domain.
+        The goal is to produce a concrete `domain_spec.md` before implementing adapters or benchmark code.
+
+        ## Rules
+
+        - Do not start implementation until all required fields are filled or marked `unknown`.
+        - Ask focused questions, one or two at a time.
+        - Prefer concrete numbers for budget, runtime, and dataset sizes.
+        - Call out evaluation leakage risks explicitly.
+        - Keep base model and tool surface fixed during the first pass unless there is a strong reason not to.
+
+        ## Required Fields
+
+        1. Problem framing:
+        - What are we trying to improve?
+        - What is one unit of evaluation?
+        - What is fixed vs mutable?
+        - What model is fixed during optimization?
+        - What budget can we spend (time, cost, candidates, or tokens)?
+
+        2. Harness definition:
+        - What interface must every candidate harness satisfy?
+        - How do we validate interface compliance?
+        - What changes are out of scope?
+
+        3. Evaluation:
+        - What is the search-set evaluation?
+        - What is the held-out test evaluation?
+        - What primary and secondary metrics matter?
+        - How noisy is the signal and what is one candidate runtime?
+        - What contamination risks exist and how are they mitigated?
+
+        4. Baselines:
+        - Which hand-written baselines should be included?
+        - What is the current strongest baseline?
+
+        5. Experience artifacts:
+        - Which offline traces or documents should seed search?
+        - Which online artifacts must be stored per candidate?
+        - Which files are highest signal for debugging regressions?
+
+        ## Suggested Workflow
+
+        1. Gather missing information and record assumptions in `domain_spec.md`.
+        2. Define search and test splits before writing code.
+        3. Implement one deterministic baseline harness first.
+        4. Add validation checks and objective scoring.
+        5. Run short fake or smoke loops before expensive provider runs.
+        """
+    )
+
+
+def _domain_spec_template() -> str:
+    return dedent(
+        """\
+        # Domain Spec: <replace-with-domain-name>
+
+        ## Domain Summary
+
+        - Goal:
+        - Unit of evaluation:
+        - Fixed components:
+        - Mutable harness surface:
+        - Fixed model(s):
+        - Optimization budget:
+
+        ## Harness Interface
+
+        - Candidate harness contract:
+        - Required inputs and outputs:
+        - Validation gate:
+        - Out-of-scope changes:
+
+        ## Evaluation Plan
+
+        - Search-set dataset:
+        - Held-out test dataset:
+        - Primary metric:
+        - Secondary metrics:
+        - Runtime per candidate:
+        - Noise considerations:
+        - Leakage or contamination risks:
+
+        ## Baselines
+
+        - Baseline A:
+        - Baseline B:
+        - Strongest known baseline:
+
+        ## Experience and Logging
+
+        - Offline traces:
+        - Online per-candidate artifacts:
+        - Required metadata:
+        - Run directory layout notes:
+
+        ## Open Questions
+
+        - Unknowns:
+        - Risky assumptions:
+        - Next validation step:
+        """
+    )

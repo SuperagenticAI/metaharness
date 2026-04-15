@@ -146,7 +146,19 @@ class FilesystemRunStore:
         self._write_json(self.candidates_dir / candidate_id / "validation" / "result.json", result.to_dict())
 
     def write_evaluation_result(self, candidate_id: str, result: Any) -> None:
-        self._write_json(self.candidates_dir / candidate_id / "evaluation" / "result.json", result.to_dict())
+        # Backward-compatible alias to search evaluation.
+        self.write_search_evaluation_result(candidate_id, result)
+
+    def write_search_evaluation_result(self, candidate_id: str, result: Any) -> None:
+        evaluation_dir = self.candidates_dir / candidate_id / "evaluation"
+        self._write_json(evaluation_dir / "result.json", result.to_dict())
+        self._write_json(evaluation_dir / "search_result.json", result.to_dict())
+
+    def write_test_evaluation_result(self, candidate_id: str, result: Any) -> None:
+        self._write_json(
+            self.candidates_dir / candidate_id / "evaluation" / "test_result.json",
+            result.to_dict(),
+        )
 
     def write_candidate_manifest(self, candidate: CandidateRecord) -> None:
         self._write_json(
@@ -155,11 +167,17 @@ class FilesystemRunStore:
                 "candidate_id": candidate.candidate_id,
                 "parent_candidate_ids": candidate.parent_candidate_ids,
                 "objective": candidate.objective,
+                "search_objective": candidate.search_objective,
+                "test_objective": candidate.test_objective,
+                "search_metrics": candidate.search_metrics,
+                "test_metrics": candidate.test_metrics,
                 "valid": candidate.valid,
+                "test_valid": candidate.test_valid,
                 "proposal_applied": candidate.proposal_applied,
                 "outcome": candidate.outcome,
                 "outcome_summary": candidate.outcome_summary,
                 "scope_violation_paths": candidate.scope_violation_paths,
+                "frontier_rank": candidate.frontier_rank,
                 "workspace_dir": str(candidate.workspace_dir),
                 "updated_at": datetime.now(UTC).isoformat(),
             },

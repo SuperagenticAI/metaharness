@@ -33,10 +33,7 @@ The experiment workflow is also influenced by [Autoresearch](https://github.com/
 | Real benchmark | `python_fixture_benchmark` `ollama-120b-20260401` | Codex over Ollama `gpt-oss:120b` | `0.050 -> 1.000` | documented | solved in one proposal iteration, slower than hosted Codex |
 | Real benchmark | `python_cli_benchmark` `hosted-codex-20260401` | hosted Codex | `0.045 -> 1.000` | documented | solved in one proposal iteration |
 | Real benchmark | `python_cli_benchmark` `ollama-20b-20260401` | Codex over Ollama `gpt-oss:20b` | `0.045 -> 0.045` | documented | proposal timed out at `240s` |
-| Provider smoke | `python_fixture_benchmark` `opencode-smoke` | OpenCode | `0.050 -> crash` | documented | sandboxed run failed before proposal execution because OpenCode attempted to write under its user log directory |
-| Provider smoke | `python_fixture_benchmark` `opencode-smoke-escalated` | OpenCode | `0.050 -> 0.050` | documented | completed cleanly but produced a `no-change` candidate |
 | Provider smoke | `python_fixture_benchmark` `gemini-smoke` | Gemini CLI | `0.050 -> crash` | documented | Gemini launched but failed because `GEMINI_API_KEY` was not set |
-| Provider smoke | `python_fixture_benchmark` `pi-smoke` | Pi | `0.050 -> crash` | documented | Pi launched but no models were configured |
 | Release validation | `python_fixture_benchmark` `ci-fixture-local-check` | fake backend | `0.050 -> 1.000` | local artifact | used to validate uv-first CI and CLI flow |
 | Release validation | `python_cli_benchmark` `ci-cli-local-check` | fake backend | `0.045 -> 1.000` | local artifact | used to validate uv-first CI and CLI flow |
 
@@ -215,26 +212,6 @@ Artifact note:
 These runs are important because they prove a provider integration actually launches through `metaharness`, writes proposal artifacts, and can be inspected after the fact.
 They are not yet benchmark-quality evidence unless the provider produces a meaningful candidate on a real target.
 
-### `python_fixture_benchmark` with OpenCode
-
-| Provider | Run ID | Best Objective | Outcome | Notes |
-| --- | --- | ---: | --- | --- |
-| OpenCode | `opencode-smoke` | baseline only | crash | sandboxed run failed before proposal execution because OpenCode attempted to write under `~/.local/share/opencode/` |
-| OpenCode | `opencode-smoke-escalated` | `0.050` | no-change | rerun outside the sandbox completed successfully but made no harness edits |
-
-Observed behavior:
-
-- the first run showed that OpenCode has environment assumptions around its own log or state directories
-- the rerun proved the backend integration itself works and stores proper proposal artifacts
-- the candidate only read `.metaharness/INSTRUCTIONS.md` and the parent manifest, then stopped without editing files
-- stderr showed `permission requested: external_directory (/src/*); auto-rejecting`, which appears to be the most important immediate blocker for useful benchmark behavior
-
-What this means:
-
-- OpenCode support is real in the library
-- OpenCode is not benchmark-validated yet in this repository
-- the next OpenCode step is permission and workspace-behavior tuning, not more parser work
-
 ### `python_fixture_benchmark` with Gemini
 
 | Provider | Run ID | Best Objective | Outcome | Notes |
@@ -247,26 +224,13 @@ What this means:
 - the current blocker is authentication in the runtime environment
 - Gemini is not benchmark-validated yet in this repository
 
-### `python_fixture_benchmark` with Pi
-
-| Provider | Run ID | Best Objective | Outcome | Notes |
-| --- | --- | ---: | --- | --- |
-| Pi | `pi-smoke` | baseline only | crash | Pi started but exited with `No models available.` and requested provider API keys or `~/.pi/agent/models.json` |
-
-What this means:
-
-- Pi support is real in the library
-- the current blocker is provider model configuration in the runtime environment
-- Pi is not benchmark-validated yet in this repository
-
 ## What Is Still Missing
 
 The registry is still incomplete in two meaningful ways:
 
 1. There is no documented `python_cli_benchmark` run yet for local `gpt-oss:120b`.
 2. There is no successful real Gemini benchmark run in this repository yet.
-3. There is no successful real Pi benchmark run in this repository yet.
-4. There is no documented Claude Code or Opus result set in this repository yet.
+3. There is no documented Claude Code or Opus result set in this repository yet.
 
 Those are the most obvious next experiments if the goal is to broaden the evidence base.
 

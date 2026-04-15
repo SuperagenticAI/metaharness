@@ -13,7 +13,7 @@
 It is inspired by the [Meta Harness paper](https://arxiv.org/pdf/2603.28052) and is an unofficial open source implementation of the core ideas in that work.
 The current benchmark evidence in this repository is centered on the Codex CLI path, including hosted Codex and Codex over local Ollama models.
 Codex is the primary and validated backend in this repository today.
-Gemini CLI, Pi, and OpenCode are experimental integrations.
+Gemini CLI is the only additional experimental integration.
 
 It is built for teams who want to improve the code and files around an agent workflow, not just the prompt.
 That includes instruction files, setup flows, validation scripts, test scripts, routing logic, and other executable support code.
@@ -111,9 +111,8 @@ uv run metaharness experiment \
 - a provider-neutral proposer backend interface
 - a real `CodexExecBackend`
 - an experimental `GeminiCliBackend`
-- an experimental `PiCliBackend`
-- an experimental `OpenCodeRunBackend`
 - a deterministic `FakeBackend`
+- extension backends via `backend_plugins` (`module:callable` factories)
 - a coding-tool integration for instruction files and script-based harnesses
 - explicit per-candidate outcomes: `keep`, `discard`, `crash`, `timeout`, `no-change`, and `scope-violation`
 - reporting commands for `inspect`, `ledger`, `summarize`, and `compare`
@@ -148,8 +147,6 @@ Detailed experiment records:
 - hosted Codex is the strongest current path for real runs
 - local Codex over Ollama works and has been exercised with `gpt-oss:20b` and `gpt-oss:120b`
 - Gemini is implemented as an experimental backend and is not part of the main validated release path
-- Pi is implemented as an experimental backend with print-mode JSON integration and is not part of the main validated release path
-- OpenCode is implemented as an experimental backend and is not part of the main validated release path
 
 All real provider results currently documented in this repository were produced through the Codex CLI path.
 That includes both hosted Codex runs and local Ollama runs driven through Codex with `gpt-oss` models.
@@ -161,7 +158,10 @@ Other coding-agent evaluations in the wider ecosystem often emphasize Claude Cod
 - [Getting started](https://superagenticai.github.io/metaharness/getting-started/)
 - [Architecture](https://superagenticai.github.io/metaharness/architecture/)
 - [Providers](https://superagenticai.github.io/metaharness/providers/)
+- [Extensions](https://superagenticai.github.io/metaharness/extensions/)
 - [Benchmarks](https://superagenticai.github.io/metaharness/benchmarks/)
+- [Official comparison](https://superagenticai.github.io/metaharness/official-comparison/)
+- [Alignment](https://superagenticai.github.io/metaharness/alignment/)
 - [CLI reference](https://superagenticai.github.io/metaharness/cli-reference/)
 - [Experiments](https://superagenticai.github.io/metaharness/experiments/)
 
@@ -322,6 +322,48 @@ Run the scaffold with the fake backend:
 ```bash
 uv run metaharness run ./my-coding-tool-optimizer --backend fake --budget 1
 ```
+
+## Backend Extensions
+
+You can register custom closed-source or internal harness adapters without editing `metaharness` core code.
+
+Add a plugin in `metaharness.json`:
+
+```json
+{
+  "backend_plugins": {
+    "cursor": {
+      "factory": "my_harness_plugins.cursor:create_backend",
+      "options": {
+        "model": "cursor-pro"
+      }
+    }
+  }
+}
+```
+
+Then run it like any other backend:
+
+```bash
+uv run metaharness run ./my-coding-tool-optimizer --backend cursor --budget 1
+```
+
+Factory contract:
+
+- reference format: `module:callable`
+- callable receives `project` and `options`
+- callable returns an object with `name`, `prepare`, `invoke`, and `collect`
+
+Create an official-style domain onboarding pack:
+
+```bash
+uv run metaharness onboard ./my-domain-onboarding
+```
+
+This writes:
+
+- `ONBOARDING.md` with a question-driven domain setup flow
+- `domain_spec.md` with a structured template for search and evaluation design
 
 ## CLI Overview
 

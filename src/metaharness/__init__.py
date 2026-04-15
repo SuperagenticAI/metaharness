@@ -1,4 +1,5 @@
 from .api import optimize_harness
+from .domain import LegacyDomainAdapter
 from .models import (
     AgentEvent,
     AgentInstructions,
@@ -11,8 +12,6 @@ from .models import (
 from .proposer.codex_exec import CodexExecBackend
 from .proposer.fake import FakeBackend
 from .proposer.gemini_cli import GeminiCliBackend
-from .proposer.opencode_run import OpenCodeRunBackend
-from .proposer.pi_cli import PiCliBackend
 
 __all__ = [
     "AgentEvent",
@@ -21,9 +20,8 @@ __all__ = [
     "EvaluationResult",
     "FakeBackend",
     "GeminiCliBackend",
-    "OpenCodeRunBackend",
+    "LegacyDomainAdapter",
     "OptimizeResult",
-    "PiCliBackend",
     "ProposalRequest",
     "ProposalResult",
     "ValidationResult",

@@ -28,6 +28,9 @@ _SUMMARY_TSV_COLUMNS = (
     "baseline_objective",
     "best_candidate_outcome",
     "improved",
+    "search_mode",
+    "selection_policy",
+    "proposal_batch_size",
     "candidate_count",
     "keep_candidate_count",
     "discard_candidate_count",
@@ -37,6 +40,7 @@ _SUMMARY_TSV_COLUMNS = (
     "scope_violation_candidate_count",
     "duration_seconds",
     "first_improving_candidate_id",
+    "best_test_objective",
     "proposal_timeout_seconds",
     "model",
     "use_oss",
@@ -54,6 +58,13 @@ _LEDGER_TSV_COLUMNS = (
     "outcome",
     "outcome_summary",
     "changed_file_count",
+    "frontier_rank",
+    "search_objective",
+    "test_objective",
+    "token_input",
+    "token_output",
+    "cost_usd",
+    "tool_call_count",
     "changed_files",
     "scope_violation_paths",
     "proposal_summary",
@@ -72,8 +83,9 @@ def summarize_run(run_dir: str | Path) -> dict[str, Any]:
     proposal = _load_first_candidate_proposal(run_dir / "candidates")
     best_proposal = _load_candidate_proposal(run_dir / "candidates", str(leaderboard.get("best_candidate_id", "c0000")))
 
-    baseline_objective = _as_float(baseline.get("objective"))
+    baseline_objective = _as_float(baseline.get("search_objective", baseline.get("objective")))
     best_objective = _as_float(leaderboard.get("best_objective"))
+    best_test_objective = _as_float(best.get("test_objective")) if isinstance(best, dict) else None
     started_at = run_config.get("started_at")
     completed_at = leaderboard.get("completed_at")
     duration_seconds = _duration_seconds(started_at, completed_at)
@@ -82,7 +94,7 @@ def summarize_run(run_dir: str | Path) -> dict[str, Any]:
     first_improving_candidate_data: dict[str, Any] | None = None
     if baseline_objective is not None:
         for candidate in sorted(candidates, key=lambda item: item["candidate_id"]):
-            objective = _as_float(candidate.get("objective"))
+            objective = _as_float(candidate.get("search_objective", candidate.get("objective")))
             if objective is not None and objective > baseline_objective:
                 first_improving_candidate = candidate["candidate_id"]
                 first_improving_candidate_data = candidate
@@ -112,6 +124,9 @@ def summarize_run(run_dir: str | Path) -> dict[str, Any]:
         "best_objective": best_objective,
         "best_candidate_outcome": _candidate_outcome(best),
         "improved": leaderboard.get("best_candidate_id") != "c0000",
+        "search_mode": str(run_config.get("search_mode", "hill-climb")),
+        "selection_policy": str(run_config.get("selection_policy", "single")),
+        "proposal_batch_size": int(run_config.get("proposal_batch_size", 1)),
         "first_improving_candidate_id": first_improving_candidate,
         "time_to_first_improvement_seconds": _time_to_candidate(started_at, first_improving_candidate_data),
         "candidate_count": len(candidates),
@@ -129,6 +144,7 @@ def summarize_run(run_dir: str | Path) -> dict[str, Any]:
         "best_changed_files_truncated_count": max(0, len(filtered_changed_files) - len(best_changed_files)),
         "best_transient_files_omitted_count": max(0, len(raw_best_changed_files) - len(filtered_changed_files)),
         "duration_seconds": duration_seconds,
+        "best_test_objective": best_test_objective,
         "started_at": started_at,
         "completed_at": completed_at,
         "best_summary": _proposal_summary(best_proposal),
@@ -170,6 +186,7 @@ def candidate_ledger(run_dir: str | Path) -> list[dict[str, Any]]:
             str(value) for value in (proposal.get("changed_files", []) if isinstance(proposal, dict) else [])
         ]
         filtered_changed_files = _filter_changed_files(raw_changed_files)
+        token_usage = proposal.get("token_usage", {}) if isinstance(proposal, dict) else {}
         rows.append(
             {
                 "run_id": run_dir.name,
@@ -178,11 +195,18 @@ def candidate_ledger(run_dir: str | Path) -> list[dict[str, Any]]:
                 "parent_candidate_ids": [str(value) for value in candidate.get("parent_candidate_ids", [])],
                 "is_best": candidate_id == best_candidate_id,
                 "objective": _as_float(candidate.get("objective")),
+                "search_objective": _as_float(candidate.get("search_objective", candidate.get("objective"))),
+                "test_objective": _as_float(candidate.get("test_objective")),
                 "valid": bool(candidate.get("valid")),
                 "proposal_applied": bool(candidate.get("proposal_applied")),
                 "outcome": _candidate_outcome(candidate),
                 "outcome_summary": str(candidate.get("outcome_summary") or ""),
                 "changed_file_count": len(filtered_changed_files),
+                "frontier_rank": candidate.get("frontier_rank"),
+                "token_input": int(token_usage.get("input_tokens", 0)) if isinstance(token_usage, dict) else 0,
+                "token_output": int(token_usage.get("output_tokens", 0)) if isinstance(token_usage, dict) else 0,
+                "cost_usd": _as_float(proposal.get("cost_usd")) if isinstance(proposal, dict) else None,
+                "tool_call_count": int(proposal.get("tool_call_count", 0)) if isinstance(proposal, dict) else 0,
                 "changed_files": filtered_changed_files,
                 "scope_violation_paths": [str(value) for value in candidate.get("scope_violation_paths", [])],
                 "proposal_summary": _proposal_summary(proposal) or "",
@@ -203,12 +227,17 @@ def render_run_summary(summary: dict[str, Any]) -> str:
         f"best_candidate_outcome={summary.get('best_candidate_outcome')}",
         f"baseline_objective={summary['baseline_objective']}",
         f"improved={summary['improved']}",
+        f"search_mode={summary.get('search_mode')}",
+        f"selection_policy={summary.get('selection_policy')}",
+        f"proposal_batch_size={summary.get('proposal_batch_size')}",
         f"candidate_count={summary['candidate_count']}",
     ]
     if summary.get("candidate_outcome_counts"):
         lines.append(f"candidate_outcomes={_format_outcome_counts(summary['candidate_outcome_counts'])}")
     if summary.get("duration_seconds") is not None:
         lines.append(f"duration_seconds={summary['duration_seconds']:.3f}")
+    if summary.get("best_test_objective") is not None:
+        lines.append(f"best_test_objective={summary['best_test_objective']:.3f}")
     if summary.get("best_changed_files"):
         lines.append(f"best_changed_files={','.join(summary['best_changed_files'])}")
     if summary.get("best_changed_files_truncated_count"):
@@ -404,6 +433,10 @@ def _load_candidate_proposal(candidates_dir: Path, candidate_id: str) -> dict[st
 
 def _load_candidate_stage_result(candidates_dir: Path, candidate_id: str, stage: str) -> dict[str, Any] | None:
     path = candidates_dir / candidate_id / stage / "result.json"
+    if stage == "evaluation":
+        search_path = candidates_dir / candidate_id / stage / "search_result.json"
+        if search_path.exists():
+            path = search_path
     if not path.exists():
         return None
     return _read_json(path)

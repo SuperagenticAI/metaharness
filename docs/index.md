@@ -6,7 +6,7 @@
     It is inspired by the <a href="https://arxiv.org/pdf/2603.28052">Meta Harness paper</a> and is an unofficial open source implementation of the core ideas in that work.
     The current benchmark evidence in this repository is centered on the Codex CLI path, including hosted Codex and Codex over local Ollama models.
     Codex is the primary and validated backend in this repository today.
-    Gemini CLI, Pi, and OpenCode are experimental integrations.
+    Gemini CLI is the only additional experimental integration.
     It treats the harness itself as the optimization target, not just the prompt.
     That includes instruction files, bootstrap scripts, validation scripts, test flows, routing logic, and other executable support code.
   </p>
@@ -112,6 +112,8 @@ Two other projects were also useful reference points while shaping this library:
 - [GEPA](https://github.com/gepa-ai/gepa), especially as a reference for packaging and reusable optimization tooling
 - [Autoresearch](https://github.com/karpathy/autoresearch) by Andrej Karpathy, especially for explicit experiment loops, keep or discard thinking, and constrained mutable scope
 
+For a direct official-vs-this-repo breakdown, including use-case guidance, see [Official Comparison](official-comparison.md).
+
 ## What It Optimizes
 
 <div class="callout-card" markdown="1">
@@ -195,7 +197,7 @@ Local Codex over Ollama has also been exercised with `gpt-oss:20b` and `gpt-oss:
 All real provider runs currently documented in this repository were produced through Codex.
 Other coding-agent benchmark writeups may emphasize Claude Code or Opus, but those are not the provider paths currently documented in this repository.
 
-Gemini, Pi, and OpenCode are available as experimental backends, but the documented benchmark evidence is still centered on Codex.
+Gemini is available as an experimental backend, but the documented benchmark evidence is still centered on Codex.
 
 ## Built-In Targets
 
@@ -253,6 +255,8 @@ uv run metaharness experiment \
 - [Getting Started](getting-started.md)
 - [Architecture](architecture.md)
 - [Providers](providers.md)
+- [Extensions](extensions.md)
 - [Benchmarks](benchmarks.md)
+- [Alignment](alignment.md)
 - [CLI Reference](cli-reference.md)
 - [Experiments](experiments.md)
