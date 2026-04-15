@@ -41,39 +41,35 @@ The right strategy is to merge strengths, not replace one with the other.
 - Preserve coding-tool workflows as a first-class domain adapter.
 - Avoid direct code vendoring from paper examples into core modules.
 
-## Phased Plan
+## What's Implemented
 
-1. Phase 1: Domain Onboarding Surface
-- Add an official-style onboarding entry point.
-- Output a structured `domain_spec.md` for new domain work.
-- Status: started. `metaharness onboard <target_dir>` now writes `ONBOARDING.md` and `domain_spec.md`.
-  Status: implemented.
+### Domain Onboarding
+- `metaharness onboard <target_dir>` creates `ONBOARDING.md` and `domain_spec.md`
+- Provides structured entry point for new domain work
 
-2. Phase 2: Domain Adapter API
-- Generalize current coding-tool integration into a domain adapter contract.
-- Keep coding-tool adapter as the default built-in implementation.
-- Define adapter hooks for validation, search evaluation, and optional test evaluation.
-  Status: implemented with backward-compatible wrapping of legacy validator/evaluator pairs.
+### Domain Adapter API
+- Generalized coding-tool integration into a domain adapter contract
+- Coding-tool adapter is the default built-in implementation
+- Adapter hooks for validation, search evaluation, and optional test evaluation
 
-3. Phase 3: Split Evaluation Model
-- Add explicit search-stage versus held-out test-stage evaluation.
-- Ensure test-stage artifacts are never leaked to proposer context during search.
-- Add run metadata fields that record split definitions and leakage safeguards.
-  Status: implemented in engine/store with `search_result.json` and optional `test_result.json`.
+### Split Evaluation
+- Explicit search-stage versus held-out test-stage evaluation
+- Test-stage artifacts never leak to proposer context during search
+- Run metadata fields record split definitions and leakage safeguards
+- `search_result.json` and optional `test_result.json` in run artifacts
 
-4. Phase 4: Frontier and Multi-Candidate Search
-- Add optional batch candidate proposals per iteration.
-- Add frontier policies beyond single scalar best, including Pareto-style policies.
-- Keep simple hill-climb mode as the default for low-cost workflows.
-  Status: implemented with `search_mode`, `proposal_batch_size`, and `selection_policy`.
+### Frontier and Multi-Candidate Search
+- Optional batch candidate proposals per iteration
+- Frontier policies beyond single scalar best, including Pareto-style policies
+- Simple hill-climb mode available as the default for low-cost workflows
+- Configurable via `search_mode`, `proposal_batch_size`, and `selection_policy`
 
-5. Phase 5: Telemetry and Experiment Upgrades
-- Extend proposal telemetry with token, cost, and tool-level summaries where available.
-- Add richer experiment summary outputs for multi-objective comparisons.
-- Keep current `inspect`, `ledger`, `summarize`, and `experiment` outputs backward compatible where possible.
-  Status: implemented with token/tool/cost fields and expanded trial/summary columns.
+### Telemetry and Experiment Upgrades
+- Extended proposal telemetry with token, cost, and tool-level summaries
+- Richer experiment summary outputs for multi-objective comparisons
+- Token/tool/cost fields and expanded trial/summary columns in outputs
 
-## Near-Term Implementation Sequence
+## Near-Term Roadmap
 
 1. Stabilize onboarding command and docs.
 2. Introduce adapter interfaces behind feature flags.
