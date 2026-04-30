@@ -51,6 +51,11 @@ class CliTests(unittest.TestCase):
             self.assertTrue((project_dir / "baseline" / "AGENTS.md").exists())
             config = json.loads((project_dir / "metaharness.json").read_text(encoding="utf-8"))
             self.assertEqual(["AGENTS.md", "GEMINI.md", "scripts"], config["allowed_write_paths"])
+            trace_evidence = Path(tmpdir) / "trace_evidence.md"
+            trace_evidence.write_text(
+                "# Trace Evidence\n\n- refusal loop in trace-cli\n",
+                encoding="utf-8",
+            )
 
             run = subprocess.run(
                 [
@@ -65,6 +70,8 @@ class CliTests(unittest.TestCase):
                     "1",
                     "--run-name",
                     "smoke",
+                    "--trace-evidence",
+                    str(trace_evidence),
                 ],
                 cwd=repo_root,
                 env=env,
@@ -88,6 +95,21 @@ class CliTests(unittest.TestCase):
                 set(proposal_result["changed_files"]),
             )
             self.assertTrue((run_dir / "candidates" / "c0001" / "proposal" / "workspace.diff").exists())
+            self.assertTrue(
+                (
+                    run_dir
+                    / "candidates"
+                    / "c0001"
+                    / "workspace"
+                    / ".metaharness"
+                    / "evidence"
+                    / "trace_evidence.md"
+                ).exists()
+            )
+            prompt_text = (
+                run_dir / "candidates" / "c0001" / "proposal" / "prompt.txt"
+            ).read_text(encoding="utf-8")
+            self.assertIn("refusal loop in trace-cli", prompt_text)
 
             inspect = subprocess.run(
                 ["python", "-m", "metaharness.cli", "inspect", str(run_dir)],

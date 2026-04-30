@@ -177,6 +177,29 @@ uv run metaharness run \
 Use `--hosted` if a project config defaults to local Ollama.
 Hosted Codex is the strongest current path for real benchmark runs in this repository.
 
+## Use Trace Evidence
+
+If you have a HALO-style trace diagnosis report, pass it to the run with
+`--trace-evidence`. A common workflow is to generate `trace_evidence.md` with
+`rlm-code`'s `trace_analysis` environment, then use that report to guide
+`metaharness` candidate proposals.
+
+```bash
+uv run metaharness run \
+  examples/python_fixture_benchmark \
+  --backend codex \
+  --hosted \
+  --trace-evidence ./trace_evidence.md \
+  --budget 1 \
+  --run-name trace-grounded-codex
+```
+
+The report is copied into each candidate workspace at
+`.metaharness/evidence/trace_evidence.md` and embedded in the proposer prompt.
+Use this when trace analysis has surfaced concrete harness failures such as
+hallucinated tool calls, redundant arguments, refusal loops, or semantic
+correctness issues.
+
 ## Use Gemini CLI
 
 Gemini is an experimental backend in the current release.

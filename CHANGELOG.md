@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+### Added
+- Trace evidence injection for candidate proposals via `--trace-evidence`, `optimize_harness(trace_evidence_path=...)`, and `run_coding_tool_project(trace_evidence_path=...)`.
+- Candidate workspaces now receive `.metaharness/evidence/trace_evidence.md` when trace evidence is supplied.
+- Proposal prompts now explicitly reference and embed supplied trace evidence so Codex/Gemini can ground harness edits in observed failures.
+
 ## [0.2.0] - 2026-04-15
 
 ### Added

@@ -60,6 +60,11 @@ def main(argv: list[str] | None = None) -> int:
     run_parser.add_argument("--search-mode", choices=["hill-climb", "frontier"], default=None)
     run_parser.add_argument("--proposal-batch-size", type=int, default=None)
     run_parser.add_argument("--selection-policy", choices=["single", "pareto"], default=None)
+    run_parser.add_argument(
+        "--trace-evidence",
+        default=None,
+        help="Path to a HALO/RLM trace evidence markdown report to inject into proposal prompts.",
+    )
 
     experiment_parser = subparsers.add_parser("experiment", help="Run a benchmark x backend x budget x trial matrix.")
     experiment_parser.add_argument("project_dirs", nargs="*")
@@ -140,6 +145,7 @@ def main(argv: list[str] | None = None) -> int:
             run_name=args.run_name,
             backend_overrides=_backend_overrides_from_args(args),
             project_overrides=_project_overrides_from_args(args),
+            trace_evidence_path=Path(args.trace_evidence) if args.trace_evidence else None,
         )
     if args.command == "experiment":
         return _cmd_experiment(
@@ -209,6 +215,7 @@ def _cmd_run(
     run_name: str | None,
     backend_overrides: dict[str, Any] | None,
     project_overrides: dict[str, Any] | None,
+    trace_evidence_path: Path | None,
 ) -> int:
     project = _load_project(project_dir)
     result = run_coding_tool_project(
@@ -217,6 +224,7 @@ def _cmd_run(
         budget=budget,
         run_name=run_name,
         backend_overrides=backend_overrides,
+        trace_evidence_path=trace_evidence_path,
         search_mode=_get_project_override(project_overrides, "search_mode"),
         proposal_batch_size=_get_project_override(project_overrides, "proposal_batch_size"),
         selection_policy=_get_project_override(project_overrides, "selection_policy"),

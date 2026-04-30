@@ -116,6 +116,7 @@ uv run metaharness experiment \
 - a coding-tool integration for instruction files and script-based harnesses
 - explicit per-candidate outcomes: `keep`, `discard`, `crash`, `timeout`, `no-change`, and `scope-violation`
 - reporting commands for `inspect`, `ledger`, `summarize`, and `compare`
+- trace evidence injection with `--trace-evidence` for HALO/RLM analysis reports
 - experiment-matrix execution with JSON and TSV outputs
 - benchmark targets and experiment records
 

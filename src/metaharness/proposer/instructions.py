@@ -100,6 +100,8 @@ def build_backend_prompt(
     *,
     bootstrap_summary_path: Path | None = None,
     bootstrap_summary_text: str = "",
+    trace_evidence_path: Path | None = None,
+    trace_evidence_text: str = "",
 ) -> str:
     prompt = [
         f"You are optimizing a harness candidate inside {workspace_dir}.",
@@ -112,10 +114,16 @@ def build_backend_prompt(
         prompt.append(
             f"Use the environment bootstrap in {bootstrap_summary_path} before spending turns on basic workspace discovery."
         )
+    if trace_evidence_path is not None:
+        prompt.append(
+            f"Use the trace evidence report in {trace_evidence_path} to ground harness changes in observed failures."
+        )
     if proposer_name == "codex":
         prompt.append("Follow the instructions file carefully before editing.")
     if proposer_name == "gemini":
         prompt.append("Use the project context file before proposing changes.")
     if bootstrap_summary_text.strip():
         prompt.extend(["", "Environment bootstrap:", "", bootstrap_summary_text.strip()])
+    if trace_evidence_text.strip():
+        prompt.extend(["", "Trace evidence:", "", trace_evidence_text.strip()])
     return "\n".join(prompt)

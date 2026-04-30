@@ -30,6 +30,11 @@ class EngineTests(unittest.TestCase):
             baseline = root / "baseline"
             baseline.mkdir()
             (baseline / "message.txt").write_text("baseline\n", encoding="utf-8")
+            trace_evidence = root / "trace_evidence.md"
+            trace_evidence.write_text(
+                "# Trace Evidence\n\n- repeated hallucinated tool calls in trace-error\n",
+                encoding="utf-8",
+            )
             run_dir = root / "runs" / "demo"
 
             result = optimize_harness(
@@ -46,6 +51,7 @@ class EngineTests(unittest.TestCase):
                 run_dir=run_dir,
                 budget=1,
                 objective="Make message.txt better.",
+                trace_evidence_path=trace_evidence,
             )
 
             self.assertEqual("c0001", result.best_candidate_id)
@@ -71,10 +77,23 @@ class EngineTests(unittest.TestCase):
                 / "snapshot.json"
             )
             prompt_path = run_dir / "candidates" / "c0001" / "proposal" / "prompt.txt"
+            candidate_evidence = (
+                run_dir
+                / "candidates"
+                / "c0001"
+                / "workspace"
+                / ".metaharness"
+                / "evidence"
+                / "trace_evidence.md"
+            )
             self.assertTrue(bootstrap_summary.exists())
             self.assertTrue(bootstrap_snapshot.exists())
+            self.assertTrue(candidate_evidence.exists())
             self.assertIn("Environment Bootstrap", bootstrap_summary.read_text(encoding="utf-8"))
-            self.assertIn("Working directory", prompt_path.read_text(encoding="utf-8"))
+            prompt = prompt_path.read_text(encoding="utf-8")
+            self.assertIn("Working directory", prompt)
+            self.assertIn("Trace evidence", prompt)
+            self.assertIn("repeated hallucinated tool calls", prompt)
             manifest = json.loads((run_dir / "candidates" / "c0001" / "manifest.json").read_text(encoding="utf-8"))
             self.assertEqual("keep", manifest["outcome"])
             self.assertEqual("this is better\n", (result.best_workspace_dir / "message.txt").read_text(encoding="utf-8"))

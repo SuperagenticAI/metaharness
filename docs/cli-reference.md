@@ -115,8 +115,11 @@ Important options:
 - `--search-mode`
 - `--proposal-batch-size`
 - `--selection-policy`
+- `--trace-evidence`
 
 `--backend` accepts built-ins (`fake`, `codex`, `gemini`) and any plugin backend name defined in `backend_plugins`.
+Use `--trace-evidence path/to/trace_evidence.md` to inject a HALO/RLM trace diagnosis report into each candidate proposal.
+The file is copied to `.metaharness/evidence/trace_evidence.md` inside the candidate workspace and embedded in the backend prompt.
 
 <div class="command-grid" markdown="1">
 <div class="command-card" markdown="1">
@@ -171,6 +174,20 @@ uv run metaharness run \
   --backend gemini \
   --model gemini-2.5-pro \
   --proposal-timeout 180 \
+  --budget 1
+```
+</div>
+<div class="command-card" markdown="1">
+### Trace-Grounded Run
+
+Use a HALO/RLM trace evidence report to ground harness edits in observed failures.
+
+```bash
+uv run metaharness run \
+  ./my-coding-tool-optimizer \
+  --backend codex \
+  --hosted \
+  --trace-evidence ./trace_evidence.md \
   --budget 1
 ```
 </div>

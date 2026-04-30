@@ -80,6 +80,7 @@ class FilesystemRunStore:
         instructions: AgentInstructions,
         proposer_name: str,
         bootstrap: EnvironmentBootstrap,
+        trace_evidence_path: Path | None = None,
     ) -> ProposalRequest:
         meta_dir = candidate.workspace_dir / ".metaharness"
         meta_dir.mkdir(parents=True, exist_ok=True)
@@ -92,6 +93,18 @@ class FilesystemRunStore:
         bootstrap_snapshot_path = bootstrap_dir / "snapshot.json"
         bootstrap_summary_path.write_text(bootstrap.summary_text, encoding="utf-8")
         self._write_json(bootstrap_snapshot_path, bootstrap.snapshot)
+
+        evidence_dir = meta_dir / "evidence"
+        evidence_dir.mkdir(parents=True, exist_ok=True)
+        candidate_trace_evidence_path: Path | None = None
+        trace_evidence_text = ""
+        if trace_evidence_path is not None:
+            source = trace_evidence_path.resolve()
+            if not source.exists():
+                raise FileNotFoundError(f"trace evidence file not found: {source}")
+            candidate_trace_evidence_path = evidence_dir / "trace_evidence.md"
+            trace_evidence_text = source.read_text(encoding="utf-8")
+            candidate_trace_evidence_path.write_text(trace_evidence_text, encoding="utf-8")
 
         parent_summary = {
             "parent_candidate_id": parent.candidate_id,
@@ -113,6 +126,8 @@ class FilesystemRunStore:
                 workspace_dir=candidate.workspace_dir,
                 bootstrap_summary_path=bootstrap_summary_path,
                 bootstrap_summary_text=bootstrap.summary_text,
+                trace_evidence_path=candidate_trace_evidence_path,
+                trace_evidence_text=trace_evidence_text,
             ),
             encoding="utf-8",
         )
@@ -127,6 +142,9 @@ class FilesystemRunStore:
             bootstrap_summary_path=bootstrap_summary_path,
             bootstrap_snapshot_path=bootstrap_snapshot_path,
             bootstrap_summary_text=bootstrap.summary_text,
+            evidence_dir=evidence_dir,
+            trace_evidence_path=candidate_trace_evidence_path,
+            trace_evidence_text=trace_evidence_text,
             instructions_path=instructions_path,
             prompt_path=prompt_path,
             instructions=instructions,

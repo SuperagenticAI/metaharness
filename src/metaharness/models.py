@@ -41,6 +41,9 @@ class ProposalRequest:
     bootstrap_summary_path: Path
     bootstrap_snapshot_path: Path
     bootstrap_summary_text: str
+    evidence_dir: Path
+    trace_evidence_path: Path | None
+    trace_evidence_text: str
     instructions_path: Path
     prompt_path: Path
     instructions: AgentInstructions

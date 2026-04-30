@@ -26,6 +26,7 @@ class MetaHarnessEngine:
         objective: str,
         constraints: Sequence[str] | None = None,
         allowed_write_paths: Sequence[str] | None = None,
+        trace_evidence_path: Path | None = None,
         search_mode: str = "hill-climb",
         proposal_batch_size: int = 1,
         selection_policy: str = "single",
@@ -38,6 +39,7 @@ class MetaHarnessEngine:
         self.objective = objective
         self.constraints = list(constraints or [])
         self.allowed_write_paths = [self._normalize_allowed_path(value) for value in (allowed_write_paths or []) if str(value).strip()]
+        self.trace_evidence_path = trace_evidence_path.resolve() if trace_evidence_path is not None else None
         self.search_mode = search_mode
         self.proposal_batch_size = max(1, int(proposal_batch_size))
         self.selection_policy = selection_policy
@@ -83,6 +85,7 @@ class MetaHarnessEngine:
                 "proposer": self.proposer.name,
                 "baseline": str(self.baseline),
                 "allowed_write_paths": self.allowed_write_paths,
+                "trace_evidence_path": str(self.trace_evidence_path) if self.trace_evidence_path else None,
                 "search_mode": self.search_mode,
                 "proposal_batch_size": self.proposal_batch_size,
                 "selection_policy": self.selection_policy,
@@ -169,6 +172,7 @@ class MetaHarnessEngine:
             instructions=instructions,
             proposer_name=self.proposer.name,
             bootstrap=bootstrap,
+            trace_evidence_path=self.trace_evidence_path,
         )
         execution = self.proposer.invoke(self.proposer.prepare(proposal_request))
         proposal_result = self.proposer.collect(execution)

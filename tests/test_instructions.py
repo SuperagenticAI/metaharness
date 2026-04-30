@@ -33,6 +33,17 @@ class InstructionRenderingTests(unittest.TestCase):
         self.assertIn("environment bootstrap", prompt.lower())
         self.assertIn("Working directory: /tmp/project", prompt)
 
+    def test_build_backend_prompt_embeds_trace_evidence(self) -> None:
+        prompt = build_backend_prompt(
+            "codex",
+            Path("/tmp/project/AGENTS.md"),
+            Path("/tmp/project"),
+            trace_evidence_path=Path("/tmp/project/.metaharness/evidence/trace_evidence.md"),
+            trace_evidence_text="# Trace Evidence\n\n- hallucinated tool calls in trace-1",
+        )
+        self.assertIn("trace evidence report", prompt.lower())
+        self.assertIn("hallucinated tool calls in trace-1", prompt)
+
 
 if __name__ == "__main__":
     unittest.main()
