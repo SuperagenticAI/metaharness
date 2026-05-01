@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.2] - 2026-05-01
+
+### Added
+- AHE-style decision observability with `.metaharness/change_manifest.json`, archived candidate manifests, optional task-level change attribution, and ledger fields for components/verdicts.
+
 ## [0.2.1] - 2026-04-30
 
 ### Added

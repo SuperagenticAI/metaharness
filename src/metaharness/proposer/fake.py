@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from collections.abc import Callable, Mapping
 from typing import Any
 
@@ -31,6 +32,12 @@ class FakeBackend(ProposerBackend):
                 self._apply_file_mutation(request, file_spec)
         else:
             self._apply_file_mutation(request, outcome)
+
+        manifest = outcome.get("change_manifest")
+        if isinstance(manifest, Mapping):
+            manifest_path = request.workspace_dir / ".metaharness" / "change_manifest.json"
+            manifest_path.parent.mkdir(parents=True, exist_ok=True)
+            manifest_path.write_text(json.dumps(dict(manifest), indent=2, sort_keys=True), encoding="utf-8")
 
         stdout_path.write_text("", encoding="utf-8")
         stderr_path.write_text("", encoding="utf-8")

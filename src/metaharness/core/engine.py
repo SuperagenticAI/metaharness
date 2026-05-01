@@ -177,6 +177,7 @@ class MetaHarnessEngine:
         execution = self.proposer.invoke(self.proposer.prepare(proposal_request))
         proposal_result = self.proposer.collect(execution)
         diff_metadata = self.store.capture_workspace_diff(parent=parent, candidate=candidate)
+        change_manifest_metadata = self.store.capture_change_manifest(candidate)
         proposal_result.changed_files = sorted(
             set(proposal_result.changed_files) | set(diff_metadata["workspace_changed_files"])
         )
@@ -185,6 +186,7 @@ class MetaHarnessEngine:
             "workspace_diff_path": diff_metadata["workspace_diff_path"],
             "workspace_changes_path": diff_metadata["workspace_changes_path"],
             "workspace_change_count": diff_metadata["workspace_change_count"],
+            **change_manifest_metadata,
         }
         workspace_change_count = int(diff_metadata["workspace_change_count"])
         candidate.proposal_applied = proposal_result.applied
@@ -234,6 +236,7 @@ class MetaHarnessEngine:
 
         search_eval = self.domain_adapter.evaluate_search(candidate.workspace_dir)
         self.store.write_search_evaluation_result(candidate.candidate_id, search_eval)
+        self.store.write_change_attribution(parent=parent, candidate=candidate, candidate_evaluation=search_eval)
         candidate.search_objective = search_eval.objective
         candidate.search_metrics = dict(search_eval.metrics)
         candidate.objective = candidate.search_objective

@@ -58,6 +58,11 @@ _LEDGER_TSV_COLUMNS = (
     "outcome",
     "outcome_summary",
     "changed_file_count",
+    "change_manifest_valid",
+    "change_manifest_change_count",
+    "change_manifest_components",
+    "change_attribution_summary",
+    "change_attribution_verdict_counts",
     "frontier_rank",
     "search_objective",
     "test_objective",
@@ -180,6 +185,8 @@ def candidate_ledger(run_dir: str | Path) -> list[dict[str, Any]]:
     for candidate in sorted(candidates, key=lambda item: item.get("candidate_id", "")):
         candidate_id = str(candidate.get("candidate_id"))
         proposal = _load_candidate_proposal(candidates_dir, candidate_id)
+        change_manifest = _load_candidate_proposal_artifact(candidates_dir, candidate_id, "change_manifest.json")
+        change_attribution = _load_candidate_proposal_artifact(candidates_dir, candidate_id, "change_attribution.json")
         validation = _load_candidate_stage_result(candidates_dir, candidate_id, "validation")
         evaluation = _load_candidate_stage_result(candidates_dir, candidate_id, "evaluation")
         raw_changed_files = [
@@ -202,6 +209,11 @@ def candidate_ledger(run_dir: str | Path) -> list[dict[str, Any]]:
                 "outcome": _candidate_outcome(candidate),
                 "outcome_summary": str(candidate.get("outcome_summary") or ""),
                 "changed_file_count": len(filtered_changed_files),
+                "change_manifest_valid": _change_manifest_valid(candidate, change_manifest),
+                "change_manifest_change_count": _change_manifest_count(candidate, change_manifest),
+                "change_manifest_components": _change_manifest_components(candidate, change_manifest),
+                "change_attribution_summary": _change_attribution_summary(candidate, change_attribution),
+                "change_attribution_verdict_counts": _change_attribution_verdict_counts(candidate, change_attribution),
                 "frontier_rank": candidate.get("frontier_rank"),
                 "token_input": int(token_usage.get("input_tokens", 0)) if isinstance(token_usage, dict) else 0,
                 "token_output": int(token_usage.get("output_tokens", 0)) if isinstance(token_usage, dict) else 0,
@@ -309,6 +321,7 @@ def render_candidate_ledger_table(rows: Sequence[dict[str, Any]]) -> str:
         "valid",
         "applied",
         "changed_files",
+        "manifest",
         "is_best",
     ]
     rendered_rows = []
@@ -321,6 +334,7 @@ def render_candidate_ledger_table(rows: Sequence[dict[str, Any]]) -> str:
                 "yes" if row.get("valid") else "no",
                 "yes" if row.get("proposal_applied") else "no",
                 str(row.get("changed_file_count", 0)),
+                str(row.get("change_manifest_change_count", 0)),
                 "yes" if row.get("is_best") else "no",
             ]
         )
@@ -403,6 +417,64 @@ def _stage_summary(result: dict[str, Any] | None) -> str:
     return str(summary) if summary is not None else ""
 
 
+def _change_manifest_valid(candidate: dict[str, Any], manifest: dict[str, Any] | None) -> bool | None:
+    if "change_manifest_valid" in candidate:
+        value = candidate.get("change_manifest_valid")
+        return bool(value) if value is not None else None
+    if isinstance(manifest, dict):
+        validation = manifest.get("validation", {})
+        if isinstance(validation, dict) and "valid" in validation:
+            return bool(validation["valid"])
+    return None
+
+
+def _change_manifest_count(candidate: dict[str, Any], manifest: dict[str, Any] | None) -> int:
+    if candidate.get("change_manifest_change_count") is not None:
+        try:
+            return int(candidate.get("change_manifest_change_count", 0))
+        except (TypeError, ValueError):
+            pass
+    if isinstance(manifest, dict) and isinstance(manifest.get("changes"), list):
+        return len(manifest["changes"])
+    return 0
+
+
+def _change_manifest_components(candidate: dict[str, Any], manifest: dict[str, Any] | None) -> list[str]:
+    components = candidate.get("change_manifest_components")
+    if isinstance(components, list):
+        return [str(component) for component in components]
+    if isinstance(manifest, dict) and isinstance(manifest.get("changes"), list):
+        return sorted(
+            {
+                str(change.get("component", ""))
+                for change in manifest["changes"]
+                if isinstance(change, dict) and str(change.get("component", "")).strip()
+            }
+        )
+    return []
+
+
+def _change_attribution_summary(candidate: dict[str, Any], attribution: dict[str, Any] | None) -> str:
+    summary = candidate.get("change_attribution_summary")
+    if summary:
+        return str(summary)
+    if isinstance(attribution, dict):
+        return str(attribution.get("summary") or "")
+    return ""
+
+
+def _change_attribution_verdict_counts(
+    candidate: dict[str, Any],
+    attribution: dict[str, Any] | None,
+) -> dict[str, int]:
+    counts = candidate.get("change_attribution_verdict_counts")
+    if isinstance(counts, dict):
+        return {str(key): int(value) for key, value in counts.items()}
+    if isinstance(attribution, dict) and isinstance(attribution.get("verdict_counts"), dict):
+        return {str(key): int(value) for key, value in attribution["verdict_counts"].items()}
+    return {}
+
+
 def _load_candidate_manifests(candidates_dir: Path) -> list[dict[str, Any]]:
     manifests = []
     if not candidates_dir.exists():
@@ -429,6 +501,17 @@ def _load_candidate_proposal(candidates_dir: Path, candidate_id: str) -> dict[st
     if not proposal_path.exists():
         return None
     return _read_json(proposal_path)
+
+
+def _load_candidate_proposal_artifact(
+    candidates_dir: Path,
+    candidate_id: str,
+    filename: str,
+) -> dict[str, Any] | None:
+    path = candidates_dir / candidate_id / "proposal" / filename
+    if not path.exists():
+        return None
+    return _read_json(path)
 
 
 def _load_candidate_stage_result(candidates_dir: Path, candidate_id: str, stage: str) -> dict[str, Any] | None:

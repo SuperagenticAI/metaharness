@@ -107,6 +107,8 @@ uv run metaharness inspect \
 ### Export The Candidate Ledger
 
 Use this when you want one row per candidate with outcomes, changed-file counts, and validation or evaluation summaries.
+When candidates write AHE-style change manifests, the ledger also includes manifest validity,
+component labels, and attribution verdict counts.
 
 ```bash
 uv run metaharness ledger \
@@ -199,6 +201,13 @@ The report is copied into each candidate workspace at
 Use this when trace analysis has surfaced concrete harness failures such as
 hallucinated tool calls, redundant arguments, refusal loops, or semantic
 correctness issues.
+
+Each proposer is also instructed to write `.metaharness/change_manifest.json`
+before finishing. MetaHarness archives that file under
+`candidates/<id>/proposal/change_manifest.json`. If your evaluator returns
+`EvaluationResult(metadata={"task_results": {...}})`, MetaHarness writes
+`proposal/change_attribution.json` by comparing predicted fixes and risk tasks
+against the candidate's actual task-level deltas.
 
 ## Use Gemini CLI
 

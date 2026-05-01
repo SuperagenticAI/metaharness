@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from metaharness import EvaluationResult, FakeBackend, ValidationResult, optimize_harness
+from metaharness.reporting import candidate_ledger
 
 
 class SimpleValidator:
@@ -16,10 +17,12 @@ class ContainsBetterEvaluator:
     def evaluate(self, workspace: Path) -> EvaluationResult:
         text = (workspace / "message.txt").read_text(encoding="utf-8")
         score = 1.0 if "better" in text else 0.0
+        task_fix = "pass" if "better" in text else "fail"
         return EvaluationResult(
             objective=score,
             metrics={"contains_better": score},
             summary="Checks whether the optimized token is present.",
+            metadata={"task_results": {"task_fix": task_fix, "task_risk": "pass"}},
         )
 
 
@@ -44,6 +47,25 @@ class EngineTests(unittest.TestCase):
                         "relative_path": "message.txt",
                         "content": "this is better\n",
                         "summary": f"Improved {request.candidate_id}.",
+                        "change_manifest": {
+                            "schema_version": "metaharness.change_manifest.v1",
+                            "candidate_id": request.candidate_id,
+                            "parent_candidate_ids": request.parent_candidate_ids,
+                            "changes": [
+                                {
+                                    "id": "change-1",
+                                    "component": "tool_description",
+                                    "description": "Clarified the message generation rule.",
+                                    "files": ["message.txt"],
+                                    "failure_pattern": "task_fix failed without the better token",
+                                    "evidence_refs": ["trace_evidence.md"],
+                                    "root_cause": "The baseline message was underspecified.",
+                                    "targeted_fix": "Include the better token.",
+                                    "predicted_fixes": ["task_fix"],
+                                    "risk_tasks": ["task_risk"],
+                                }
+                            ],
+                        },
                     }
                 ),
                 validator=SimpleValidator(),
@@ -96,6 +118,29 @@ class EngineTests(unittest.TestCase):
             self.assertIn("repeated hallucinated tool calls", prompt)
             manifest = json.loads((run_dir / "candidates" / "c0001" / "manifest.json").read_text(encoding="utf-8"))
             self.assertEqual("keep", manifest["outcome"])
+            self.assertTrue(manifest["change_manifest_valid"])
+            self.assertEqual(1, manifest["change_manifest_change_count"])
+            self.assertEqual(["tool_description"], manifest["change_manifest_components"])
+            self.assertEqual({"EFFECTIVE": 1}, manifest["change_attribution_verdict_counts"])
+            change_manifest = json.loads(
+                (run_dir / "candidates" / "c0001" / "proposal" / "change_manifest.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertTrue(change_manifest["validation"]["valid"])
+            self.assertEqual("change-1", change_manifest["changes"][0]["id"])
+            attribution = json.loads(
+                (run_dir / "candidates" / "c0001" / "proposal" / "change_attribution.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertEqual(["task_fix"], attribution["task_delta"]["fixed"])
+            self.assertEqual("EFFECTIVE", attribution["change_evaluations"][0]["verdict"])
+            ledger = candidate_ledger(run_dir)
+            row = next(item for item in ledger if item["candidate_id"] == "c0001")
+            self.assertTrue(row["change_manifest_valid"])
+            self.assertEqual(1, row["change_manifest_change_count"])
+            self.assertEqual({"EFFECTIVE": 1}, row["change_attribution_verdict_counts"])
             self.assertEqual("this is better\n", (result.best_workspace_dir / "message.txt").read_text(encoding="utf-8"))
 
 

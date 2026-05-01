@@ -147,7 +147,7 @@ Ask a coding agent to improve the workspace, then validate and score the result 
 <span class="flow-step">4</span>
 **Keep evidence**
 
-Store diffs, manifests, ledgers, outcomes, and summaries on disk so the run can be audited and compared later.
+Store diffs, AHE-style change manifests, attribution reports, ledgers, outcomes, and summaries on disk so the run can be audited and compared later.
 </div>
 </div>
 

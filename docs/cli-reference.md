@@ -120,6 +120,7 @@ Important options:
 `--backend` accepts built-ins (`fake`, `codex`, `gemini`) and any plugin backend name defined in `backend_plugins`.
 Use `--trace-evidence path/to/trace_evidence.md` to inject a HALO/RLM trace diagnosis report into each candidate proposal.
 The file is copied to `.metaharness/evidence/trace_evidence.md` inside the candidate workspace and embedded in the backend prompt.
+Proposers are instructed to write `.metaharness/change_manifest.json`; MetaHarness archives it with the proposal and can attribute predicted fixes/regressions when evaluator metadata includes `task_results`.
 
 <div class="command-grid" markdown="1">
 <div class="command-card" markdown="1">
@@ -351,7 +352,7 @@ uv run metaharness ledger \
   --tsv
 ```
 
-Use this when you want one row per candidate with outcomes, changed-file counts, summaries, and scope violations.
+Use this when you want one row per candidate with outcomes, changed-file counts, summaries, scope violations, change-manifest status, changed component labels, and attribution verdict counts.
 
 ## `summarize`
 

@@ -21,6 +21,8 @@ class InstructionRenderingTests(unittest.TestCase):
         self.assertIn("Improve latency.", text)
         self.assertIn("Keep tests passing.", text)
         self.assertIn("External evaluator decides success.", text)
+        self.assertIn(".metaharness/change_manifest.json", text)
+        self.assertIn("predicted_fixes", text)
 
     def test_build_backend_prompt_embeds_bootstrap_summary(self) -> None:
         prompt = build_backend_prompt(
@@ -43,6 +45,7 @@ class InstructionRenderingTests(unittest.TestCase):
         )
         self.assertIn("trace evidence report", prompt.lower())
         self.assertIn("hallucinated tool calls in trace-1", prompt)
+        self.assertIn(".metaharness/change_manifest.json", prompt)
 
 
 if __name__ == "__main__":

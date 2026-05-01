@@ -125,6 +125,11 @@ class CandidateRecord:
     outcome_summary: str = ""
     scope_violation_paths: list[str] = field(default_factory=list)
     frontier_rank: int | None = None
+    change_manifest_valid: bool | None = None
+    change_manifest_change_count: int = 0
+    change_manifest_components: list[str] = field(default_factory=list)
+    change_attribution_summary: str = ""
+    change_attribution_verdict_counts: dict[str, int] = field(default_factory=dict)
 
 
 @dataclass(slots=True)

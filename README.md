@@ -117,6 +117,7 @@ uv run metaharness experiment \
 - explicit per-candidate outcomes: `keep`, `discard`, `crash`, `timeout`, `no-change`, and `scope-violation`
 - reporting commands for `inspect`, `ledger`, `summarize`, and `compare`
 - trace evidence injection with `--trace-evidence` for HALO/RLM analysis reports
+- AHE-style change manifests and attribution reports for evidence-backed candidate edits
 - experiment-matrix execution with JSON and TSV outputs
 - benchmark targets and experiment records
 
