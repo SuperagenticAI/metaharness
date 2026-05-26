@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0] - 2026-05-26
+
+### Added
+- Paper-aligned filesystem experience snapshots that expose prior candidate workspaces, manifests, search scores, proposal traces, diffs, and attribution artifacts to later proposers.
+- Run-level Pareto frontier output at `indexes/frontier.json` plus `OptimizeResult.frontier_candidate_ids`.
+- Held-out test evaluation finalization for the selected frontier after search completes.
+- Paper-like `python_fixture_benchmark` defaults with frontier search, batched proposals, Pareto selection, and `test_tasks.json`.
+- Checked-in hosted Codex paper-like experiment config at `examples/experiment_configs/codex-paperlike-fixture.json`.
+- Normalized coding-tool evaluator `task_results` metadata for change attribution.
+- Experiment config `project_overrides` for search mode, proposal batch size, and selection policy.
+
+### Changed
+- Proposal prompts now direct Codex/Gemini to compare all prior candidates, not only the immediate parent.
+- Legacy evaluator wrapping now honors `evaluate_search` and `evaluate_test` methods when present.
+
 ## [0.2.2] - 2026-05-01
 
 ### Added

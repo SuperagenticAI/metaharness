@@ -25,7 +25,6 @@ from .reporting import (
     render_run_summary,
     render_tsv,
     summarize_project_runs,
-    summarize_run,
     summary_tsv_columns,
 )
 from .scaffold import create_coding_tool_scaffold, create_domain_onboarding_pack
@@ -316,7 +315,7 @@ def _cmd_smoke_codex(
     local_provider = resolved_options.get("local_provider")
     model = resolved_options.get("model")
     if use_oss:
-        print(f"codex_oss=true")
+        print("codex_oss=true")
     if local_provider:
         print(f"codex_local_provider={local_provider}")
     if model:

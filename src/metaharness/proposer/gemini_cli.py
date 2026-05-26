@@ -3,7 +3,6 @@ from __future__ import annotations
 import subprocess
 from shutil import which
 from typing import Any
-from pathlib import Path
 
 from ..models import ProposalExecution, ProposalRequest, ProposalResult
 from .base import ProposerBackend
