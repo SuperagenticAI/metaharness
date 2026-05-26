@@ -17,6 +17,7 @@ class ExperimentSpec:
     models: list[str] = field(default_factory=list)
     results_dir: Path | None = None
     backend_overrides: dict[str, Any] = field(default_factory=dict)
+    project_overrides: dict[str, Any] = field(default_factory=dict)
     raw: dict[str, Any] = field(default_factory=dict)
 
 
@@ -48,6 +49,9 @@ def load_experiment_spec(config_path: str | Path) -> ExperimentSpec:
     raw_backend_overrides = payload.get("backend_overrides", {})
     if not isinstance(raw_backend_overrides, dict):
         raise ValueError("experiment config field 'backend_overrides' must be an object when present")
+    raw_project_overrides = payload.get("project_overrides", {})
+    if not isinstance(raw_project_overrides, dict):
+        raise ValueError("experiment config field 'project_overrides' must be an object when present")
 
     trial_count = int(payload.get("trial_count", 1))
     if trial_count < 1:
@@ -65,6 +69,7 @@ def load_experiment_spec(config_path: str | Path) -> ExperimentSpec:
         models=[str(value) for value in raw_models],
         results_dir=results_dir,
         backend_overrides=dict(raw_backend_overrides),
+        project_overrides=dict(raw_project_overrides),
         raw=dict(payload),
     )
 
@@ -106,6 +111,7 @@ def resolve_experiment_inputs(
     models = list(cli_models) if cli_models else (list(spec.models) if spec is not None else [])
     results_dir = cli_results_dir.resolve() if cli_results_dir is not None else (spec.results_dir if spec is not None else None)
     backend_overrides = merge_backend_overrides(spec.backend_overrides if spec is not None else None, cli_backend_overrides)
+    project_overrides = merge_backend_overrides(spec.project_overrides if spec is not None else None, None)
 
     return {
         "project_dirs": project_dirs,
@@ -115,6 +121,7 @@ def resolve_experiment_inputs(
         "models": models,
         "results_dir": results_dir,
         "backend_overrides": backend_overrides,
+        "project_overrides": project_overrides,
         "config_path": spec.config_path if spec is not None else None,
         "config_payload": dict(spec.raw) if spec is not None else None,
     }

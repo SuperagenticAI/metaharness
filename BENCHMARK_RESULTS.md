@@ -5,6 +5,8 @@ All recorded runs below were executed through the Codex CLI path, either with ho
 The run directories themselves are local artifacts under `examples/*/runs/` and are gitignored.
 This file is the checked-in summary of those runs.
 
+Note: the checked-in `python_fixture_benchmark` config has since been upgraded to a paper-like frontier setup with search-time `tasks.json`, held-out `test_tasks.json`, and default multi-iteration search. The historical runs below predate that split and solved the older one-shot benchmark shape.
+
 Provider smoke results that are useful for implementation status, but are not benchmark-quality comparisons yet, are listed separately at the end of this file.
 
 ## `python_fixture_benchmark`

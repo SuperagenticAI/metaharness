@@ -73,7 +73,14 @@ class CodingToolEvaluator:
             objective=score,
             metrics={"score": score, "weight_hit": hit_weight, "weight_total": total_weight},
             summary=summary,
-            metadata={"details": details, "stage": label},
+            metadata={
+                "details": details,
+                "stage": label,
+                "task_results": {
+                    str(detail["id"]): "pass" if detail.get("status") == "passed" else "fail"
+                    for detail in details
+                },
+            },
         )
 
     def _evaluate_task(self, workspace: Path, task: CodingToolTask) -> tuple[bool, dict[str, str | int | float]]:

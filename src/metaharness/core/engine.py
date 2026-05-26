@@ -103,12 +103,6 @@ class MetaHarnessEngine:
             baseline.search_objective = baseline_eval.objective
             baseline.search_metrics = dict(baseline_eval.metrics)
             baseline.objective = baseline.search_objective
-            baseline_test = self.domain_adapter.evaluate_test(baseline.workspace_dir)
-            if baseline_test is not None:
-                self.store.write_test_evaluation_result(baseline.candidate_id, baseline_test)
-                baseline.test_valid = True
-                baseline.test_objective = baseline_test.objective
-                baseline.test_metrics = dict(baseline_test.metrics)
         else:
             baseline.search_objective = float("-inf")
             baseline.objective = float("-inf")
@@ -118,6 +112,7 @@ class MetaHarnessEngine:
 
         best = baseline
         candidates = [baseline.candidate_id]
+        candidate_records = [baseline]
 
         for _ in range(self.budget):
             parent = best
@@ -129,6 +124,7 @@ class MetaHarnessEngine:
                 self._evaluate_candidate(parent=parent, candidate=candidate)
                 self.store.write_candidate_manifest(candidate)
                 candidates.append(candidate.candidate_id)
+                candidate_records.append(candidate)
 
             selected = self._select_next_parent(parent=parent, batch=batch)
             if selected is not parent:
@@ -146,11 +142,18 @@ class MetaHarnessEngine:
                     candidate.outcome_summary = self._discard_summary(parent, candidate)
                     self.store.write_candidate_manifest(candidate)
 
+        frontier = self._rank_run_frontier(candidate_records)
+        self._finalize_test_evaluations(frontier)
+        for candidate in candidate_records:
+            self.store.write_candidate_manifest(candidate)
+        self.store.write_frontier(frontier)
+
         self.store.write_index(
             {
                 "best_candidate_id": best.candidate_id,
                 "best_objective": best.objective,
                 "candidates": candidates,
+                "frontier_candidate_ids": [candidate.candidate_id for candidate in frontier],
                 "completed_at": datetime.now(UTC).isoformat(),
             }
         )
@@ -161,6 +164,7 @@ class MetaHarnessEngine:
             best_workspace_dir=best.workspace_dir,
             best_objective=best.objective if best.objective is not None else float("-inf"),
             candidate_ids=candidates,
+            frontier_candidate_ids=[candidate.candidate_id for candidate in frontier],
         )
 
     def _evaluate_candidate(self, parent: CandidateRecord, candidate: CandidateRecord) -> None:
@@ -243,13 +247,6 @@ class MetaHarnessEngine:
         candidate.outcome = "unknown"
         candidate.outcome_summary = ""
 
-        test_eval = self.domain_adapter.evaluate_test(candidate.workspace_dir)
-        if test_eval is not None:
-            self.store.write_test_evaluation_result(candidate.candidate_id, test_eval)
-            candidate.test_valid = True
-            candidate.test_objective = test_eval.objective
-            candidate.test_metrics = dict(test_eval.metrics)
-
     def _effective_batch_size(self) -> int:
         if self.search_mode == "hill-climb":
             return self.proposal_batch_size
@@ -290,6 +287,47 @@ class MetaHarnessEngine:
         for rank, (candidate, _, _) in enumerate(frontier, start=1):
             candidate.frontier_rank = rank
         return frontier[0][0]
+
+    def _rank_run_frontier(self, candidates: Sequence[CandidateRecord]) -> list[CandidateRecord]:
+        valid_candidates = [
+            candidate
+            for candidate in candidates
+            if candidate.valid and candidate.search_objective is not None
+        ]
+        points = []
+        for candidate in valid_candidates:
+            score = candidate.search_objective if candidate.search_objective is not None else float("-inf")
+            cost = self._secondary_cost(candidate)
+            points.append((candidate, score, cost))
+
+        frontier = []
+        for candidate, score, cost in points:
+            dominated = False
+            for _, other_score, other_cost in points:
+                if other_score >= score and other_cost <= cost and (other_score > score or other_cost < cost):
+                    dominated = True
+                    break
+            if not dominated:
+                frontier.append((candidate, score, cost))
+
+        frontier.sort(key=lambda item: (item[1], -item[2]), reverse=True)
+        for candidate in candidates:
+            candidate.frontier_rank = None
+        ranked = []
+        for rank, (candidate, _, _) in enumerate(frontier, start=1):
+            candidate.frontier_rank = rank
+            ranked.append(candidate)
+        return ranked
+
+    def _finalize_test_evaluations(self, frontier: Sequence[CandidateRecord]) -> None:
+        for candidate in frontier:
+            test_eval = self.domain_adapter.evaluate_test(candidate.workspace_dir)
+            if test_eval is None:
+                continue
+            self.store.write_test_evaluation_result(candidate.candidate_id, test_eval)
+            candidate.test_valid = True
+            candidate.test_objective = test_eval.objective
+            candidate.test_metrics = dict(test_eval.metrics)
 
     @staticmethod
     def _secondary_cost(candidate: CandidateRecord) -> float:

@@ -418,6 +418,11 @@ class CliTests(unittest.TestCase):
                         "backends": ["fake"],
                         "trial_count": 2,
                         "results_dir": "./config-results",
+                        "project_overrides": {
+                            "search_mode": "frontier",
+                            "proposal_batch_size": 2,
+                            "selection_policy": "pareto",
+                        },
                     }
                 ),
                 encoding="utf-8",
@@ -441,6 +446,10 @@ class CliTests(unittest.TestCase):
             self.assertIn("experiment_dir=", experiment.stdout)
             self.assertTrue((results_dir / "experiment.json").exists())
             self.assertTrue((results_dir / "aggregates.tsv").exists())
+            payload = json.loads((results_dir / "experiment.json").read_text(encoding="utf-8"))
+            self.assertEqual("frontier", payload["trials"][0]["search_mode"])
+            self.assertEqual("pareto", payload["trials"][0]["selection_policy"])
+            self.assertEqual(2, payload["trials"][0]["proposal_batch_size"])
 
 
 if __name__ == "__main__":

@@ -272,7 +272,7 @@ def _cmd_experiment(
         models=resolved["models"],
         results_dir=resolved_results_dir,
         backend_overrides=resolved["backend_overrides"],
-        project_overrides=project_overrides,
+        project_overrides={**resolved.get("project_overrides", {}), **(project_overrides or {})},
         config_path=resolved["config_path"],
         config_payload=resolved["config_payload"],
     )

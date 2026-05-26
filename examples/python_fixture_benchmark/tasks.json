@@ -48,15 +48,6 @@
     ]
   },
   {
-    "id": "test-script-content",
-    "type": "file_phrase",
-    "path": "scripts/test.sh",
-    "weight": 1.0,
-    "required_phrases": [
-      "PYTHONPATH=fixture_repo/src .venv/bin/python -m unittest discover -s fixture_repo/tests -v"
-    ]
-  },
-  {
     "id": "bootstrap-command",
     "type": "command",
     "weight": 1.5,
@@ -68,13 +59,6 @@
     "type": "command",
     "weight": 1.0,
     "command": "bash scripts/validate.sh && grep -q 'Never use destructive git commands' AGENTS.md && grep -q 'Read AGENTS.md first.' GEMINI.md",
-    "expect_exit_code": 0
-  },
-  {
-    "id": "test-command",
-    "type": "command",
-    "weight": 2.0,
-    "command": "bash scripts/bootstrap.sh && bash scripts/test.sh",
     "expect_exit_code": 0
   }
 ]

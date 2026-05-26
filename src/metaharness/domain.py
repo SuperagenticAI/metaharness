@@ -27,8 +27,13 @@ class LegacyDomainAdapter:
         return self.validator.validate(workspace)
 
     def evaluate_search(self, workspace: Path) -> EvaluationResult:
+        evaluate_search = getattr(self.evaluator, "evaluate_search", None)
+        if callable(evaluate_search):
+            return evaluate_search(workspace)
         return self.evaluator.evaluate(workspace)
 
     def evaluate_test(self, workspace: Path) -> EvaluationResult | None:
-        # Legacy integrations had a single evaluation stage only.
+        evaluate_test = getattr(self.evaluator, "evaluate_test", None)
+        if callable(evaluate_test):
+            return evaluate_test(workspace)
         return None

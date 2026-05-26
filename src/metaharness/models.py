@@ -140,6 +140,7 @@ class OptimizeResult:
     best_workspace_dir: Path
     best_objective: float
     candidate_ids: list[str]
+    frontier_candidate_ids: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -149,4 +150,5 @@ class OptimizeResult:
             "best_workspace_dir": str(self.best_workspace_dir),
             "best_objective": self.best_objective,
             "candidate_ids": list(self.candidate_ids),
+            "frontier_candidate_ids": list(self.frontier_candidate_ids),
         }

@@ -8,6 +8,7 @@ These are not prompt-only demos. Each benchmark is a small filesystem project wi
 - `GEMINI.md`
 - real helper scripts under `scripts/`
 - deterministic `tasks.json` checks
+- optional held-out `test_tasks.json` checks
 - a real fixture repo that the scripts exercise
 
 ## Benchmarks
@@ -21,14 +22,15 @@ Focus:
 - real `python -m venv` bootstrap
 - real `unittest` run against a fixture package
 - instruction-file safety and context checks
+- paper-like frontier defaults with held-out test tasks
 
 Run it:
 
 ```bash
 uv run metaharness run examples/python_fixture_benchmark --backend fake --budget 1
-uv run metaharness run examples/python_fixture_benchmark --backend codex --hosted --budget 1
-uv run metaharness run examples/python_fixture_benchmark --backend codex --oss --local-provider ollama --model gpt-oss:20b --proposal-timeout 240 --budget 1
-uv run metaharness run examples/python_fixture_benchmark --backend codex --oss --local-provider ollama --model gpt-oss:120b --proposal-timeout 420 --budget 1
+uv run metaharness run examples/python_fixture_benchmark --backend codex --hosted --budget 3
+uv run metaharness run examples/python_fixture_benchmark --backend codex --oss --local-provider ollama --model gpt-oss:120b --proposal-timeout 420 --budget 3
+uv run metaharness experiment --config examples/experiment_configs/codex-paperlike-fixture.json
 ```
 
 ### `python_cli_benchmark`

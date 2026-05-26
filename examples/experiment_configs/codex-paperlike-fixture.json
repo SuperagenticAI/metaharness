@@ -1,0 +1,23 @@
+{
+  "project_dirs": [
+    "../python_fixture_benchmark"
+  ],
+  "backends": [
+    "codex"
+  ],
+  "budgets": [
+    3
+  ],
+  "trial_count": 1,
+  "backend_overrides": {
+    "use_oss": false,
+    "local_provider": "",
+    "model": "",
+    "proposal_timeout_seconds": 300
+  },
+  "project_overrides": {
+    "search_mode": "frontier",
+    "proposal_batch_size": 2,
+    "selection_policy": "pareto"
+  }
+}

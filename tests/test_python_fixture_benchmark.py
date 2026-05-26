@@ -34,6 +34,23 @@ class PythonFixtureBenchmarkTests(unittest.TestCase):
         self.assertEqual(0, completed.returncode, completed.stderr)
         self.assertIn("best_candidate_id=c0001", completed.stdout)
         self.assertIn("best_objective=1.000", completed.stdout)
+        run_dir = example_dir / "runs" / run_name
+        self.assertTrue((run_dir / "indexes" / "frontier.json").exists())
+        self.assertTrue((run_dir / "candidates" / "c0001" / "evaluation" / "test_result.json").exists())
+        self.assertFalse(
+            (
+                run_dir
+                / "candidates"
+                / "c0001"
+                / "workspace"
+                / ".metaharness"
+                / "experience"
+                / "candidates"
+                / "c0000"
+                / "evaluation"
+                / "test_result.json"
+            ).exists()
+        )
 
 
 if __name__ == "__main__":

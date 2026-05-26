@@ -8,6 +8,7 @@
   "baseline_dir": "baseline",
   "runs_dir": "runs",
   "tasks_file": "tasks.json",
+  "test_tasks_file": "test_tasks.json",
   "required_files": [
     "AGENTS.md",
     "GEMINI.md",
@@ -31,5 +32,8 @@
     }
   },
   "example_profile": "coding-tool-python-fixture",
-  "default_budget": 1
+  "search_mode": "frontier",
+  "proposal_batch_size": 2,
+  "selection_policy": "pareto",
+  "default_budget": 3
 }

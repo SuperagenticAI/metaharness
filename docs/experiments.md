@@ -17,6 +17,14 @@ Important artifact policy:
 
 For repeated benchmark runs, use `metaharness experiment` so the results are saved as both JSON and TSV.
 
+Current paper-like fixture experiment config:
+
+- `examples/experiment_configs/codex-paperlike-fixture.json`
+- target: `examples/python_fixture_benchmark`
+- shape: frontier search, two proposals per iteration, Pareto selection, held-out `test_tasks.json`
+
+Historical real-provider Codex runs listed below predate that search/test split and solved the earlier one-shot benchmark shape.
+
 The experiment workflow is also influenced by [Autoresearch](https://github.com/karpathy/autoresearch) by Andrej Karpathy, especially in the emphasis on explicit experiment records, repeatable runs, and outcome-driven iteration.
 
 ## Experiment Registry

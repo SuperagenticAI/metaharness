@@ -90,6 +90,10 @@ class FilesystemRunStore:
         experience_dir = meta_dir / "experience"
         experience_dir.mkdir(parents=True, exist_ok=True)
         self._copy_parent_artifacts(parent, experience_dir / "parent")
+        self._copy_prior_candidate_artifacts(
+            target_dir=experience_dir / "candidates",
+            current_candidate_id=candidate.candidate_id,
+        )
         bootstrap_dir = meta_dir / "bootstrap"
         bootstrap_dir.mkdir(parents=True, exist_ok=True)
         bootstrap_summary_path = bootstrap_dir / "summary.md"
@@ -115,6 +119,11 @@ class FilesystemRunStore:
             "constraints": instructions.constraints,
         }
         self._write_json(experience_dir / "parent_summary.json", parent_summary)
+        self._write_experience_index(
+            experience_dir=experience_dir,
+            parent=parent,
+            current_candidate_id=candidate.candidate_id,
+        )
 
         instructions_path = meta_dir / self._instructions_filename(proposer_name)
         instructions_text = render_backend_instructions(proposer_name, instructions)
@@ -366,6 +375,27 @@ class FilesystemRunStore:
     def write_index(self, data: dict[str, Any]) -> None:
         self._write_json(self.index_dir / "leaderboard.json", data)
 
+    def write_frontier(self, candidates: list[CandidateRecord]) -> None:
+        self._write_json(
+            self.index_dir / "frontier.json",
+            {
+                "schema_version": "metaharness.frontier.v1",
+                "candidate_ids": [candidate.candidate_id for candidate in candidates],
+                "candidates": [
+                    {
+                        "candidate_id": candidate.candidate_id,
+                        "frontier_rank": candidate.frontier_rank,
+                        "search_objective": candidate.search_objective,
+                        "test_objective": candidate.test_objective,
+                        "search_metrics": candidate.search_metrics,
+                        "test_metrics": candidate.test_metrics,
+                        "secondary_cost": self._frontier_secondary_cost(candidate),
+                    }
+                    for candidate in candidates
+                ],
+            },
+        )
+
     def capture_workspace_diff(self, parent: CandidateRecord, candidate: CandidateRecord) -> dict[str, Any]:
         proposal_dir = candidate.candidate_dir / "proposal"
         proposal_dir.mkdir(parents=True, exist_ok=True)
@@ -538,6 +568,94 @@ class FilesystemRunStore:
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(source, destination)
 
+    def _copy_prior_candidate_artifacts(self, target_dir: Path, current_candidate_id: str) -> None:
+        if target_dir.exists():
+            shutil.rmtree(target_dir)
+        target_dir.mkdir(parents=True, exist_ok=True)
+        if not self.candidates_dir.exists():
+            return
+
+        for candidate_dir in sorted(path for path in self.candidates_dir.iterdir() if path.is_dir()):
+            candidate_id = candidate_dir.name
+            if candidate_id == current_candidate_id:
+                continue
+            manifest_path = candidate_dir / "manifest.json"
+            if not manifest_path.exists():
+                continue
+            candidate_target = target_dir / candidate_id
+            for relative in [
+                Path("manifest.json"),
+                Path("validation/result.json"),
+                Path("evaluation/search_result.json"),
+                Path("proposal/result.json"),
+                Path("proposal/events.json"),
+                Path("proposal/change_manifest.json"),
+                Path("proposal/change_attribution.json"),
+                Path("proposal/workspace.diff"),
+                Path("proposal/workspace_changes.json"),
+            ]:
+                source = candidate_dir / relative
+                if not source.exists():
+                    continue
+                destination = candidate_target / relative
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(source, destination)
+
+            workspace_source = candidate_dir / "workspace"
+            workspace_target = candidate_target / "workspace"
+            if workspace_source.exists():
+                shutil.copytree(
+                    workspace_source,
+                    workspace_target,
+                    ignore=shutil.ignore_patterns(".metaharness"),
+                )
+
+    def _write_experience_index(
+        self,
+        *,
+        experience_dir: Path,
+        parent: CandidateRecord,
+        current_candidate_id: str,
+    ) -> None:
+        prior_candidates = []
+        candidates_experience_dir = experience_dir / "candidates"
+        if candidates_experience_dir.exists():
+            prior_candidates = [
+                path.name
+                for path in sorted(candidates_experience_dir.iterdir())
+                if path.is_dir()
+            ]
+
+        self._write_json(
+            experience_dir / "index.json",
+            {
+                "schema_version": "metaharness.experience_index.v1",
+                "current_candidate_id": current_candidate_id,
+                "parent_candidate_id": parent.candidate_id,
+                "prior_candidate_ids": prior_candidates,
+                "notes": [
+                    "candidates/<id>/workspace contains the prior harness source snapshot without nested .metaharness history.",
+                    "candidates/<id>/manifest.json records score, validity, outcome, and parentage.",
+                    "candidates/<id>/proposal contains proposer traces, diffs, and change attribution when available.",
+                    "candidates/<id>/evaluation/search_result.json is search-time feedback; held-out test results are written only after search finalization.",
+                ],
+            },
+        )
+        readme = "\n".join(
+            [
+                "# MetaHarness Experience",
+                "",
+                "Use this directory as the filesystem feedback channel for harness search.",
+                "",
+                "- `parent/` mirrors the immediate parent candidate's key artifacts.",
+                "- `candidates/` contains all prior evaluated candidates available to this proposal.",
+                "- Compare manifests, search evaluations, proposal traces, and workspace diffs before editing.",
+                "- Held-out test results are intentionally absent during search.",
+                "",
+            ]
+        )
+        (experience_dir / "README.md").write_text(readme, encoding="utf-8")
+
     @staticmethod
     def _instructions_filename(proposer_name: str) -> str:
         if proposer_name == "codex":
@@ -587,3 +705,11 @@ class FilesystemRunStore:
             return content.decode("utf-8")
         except UnicodeDecodeError:
             return None
+
+    @staticmethod
+    def _frontier_secondary_cost(candidate: CandidateRecord) -> float | None:
+        for key in ("context_len", "context_chars", "context_cost", "prompt_len"):
+            value = candidate.search_metrics.get(key)
+            if value is not None:
+                return float(value)
+        return None
