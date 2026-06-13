@@ -1,7 +1,8 @@
 {
   "project_dirs": [
     "../python_fixture_benchmark",
-    "../python_cli_benchmark"
+    "../python_cli_benchmark",
+    "../omnigent_agent_benchmark"
   ],
   "backends": [
     "fake"

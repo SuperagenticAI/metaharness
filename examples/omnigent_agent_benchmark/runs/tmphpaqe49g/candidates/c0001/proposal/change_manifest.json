@@ -1,0 +1,15 @@
+{
+  "candidate_id": "c0001",
+  "changes": [],
+  "parent_candidate_ids": [
+    "c0000"
+  ],
+  "schema_version": "metaharness.change_manifest.v1",
+  "validation": {
+    "source_path": "/Users/shashi/oss/meta-harness/examples/omnigent_agent_benchmark/runs/tmphpaqe49g/candidates/c0001/workspace/.metaharness/change_manifest.json",
+    "valid": false,
+    "warnings": [
+      "missing .metaharness/change_manifest.json"
+    ]
+  }
+}

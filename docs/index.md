@@ -6,7 +6,7 @@
     It is inspired by the <a href="https://arxiv.org/pdf/2603.28052">Meta Harness paper</a> and is an unofficial open source implementation of the core ideas in that work.
     The current benchmark evidence in this repository is centered on the Codex CLI path, including hosted Codex and Codex over local Ollama models.
     Codex is the primary and validated backend in this repository today.
-    Gemini CLI is the only additional experimental integration.
+    Gemini CLI and Omnigent are additional experimental integrations.
     It treats the harness itself as the optimization target, not just the prompt.
     That includes instruction files, bootstrap scripts, validation scripts, test flows, routing logic, and other executable support code.
   </p>
@@ -24,7 +24,7 @@
   </div>
   <div class="stat-card">
     <strong>Codex-first today</strong>
-    Hosted Codex and local Codex over Ollama have both been exercised in real runs.
+    Hosted Codex and local Codex over Ollama have both been exercised in real runs. Omnigent is available as an experimental proposer backend.
   </div>
   <div class="stat-card">
     <strong>Filesystem evidence</strong>
@@ -197,12 +197,14 @@ Local Codex over Ollama has also been exercised with `gpt-oss:20b` and `gpt-oss:
 All real provider runs currently documented in this repository were produced through Codex.
 Other coding-agent benchmark writeups may emphasize Claude Code or Opus, but those are not the provider paths currently documented in this repository.
 
-Gemini is available as an experimental backend, but the documented benchmark evidence is still centered on Codex.
+Gemini and Omnigent are available as experimental backends, but the main documented benchmark evidence is still centered on Codex.
+The Omnigent backend has a real smoke result on the Omnigent-agent benchmark: `c0001`, objective `0.875`, and no write-scope violations.
 
 ## Built-In Targets
 
 - `examples/python_fixture_benchmark`
 - `examples/python_cli_benchmark`
+- `examples/omnigent_agent_benchmark`
 - `examples/ticket_router`
 
 The two Python benchmarks are the main release-quality examples.

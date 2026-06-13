@@ -1,0 +1,14 @@
+{
+  "current_candidate_id": "c0001",
+  "notes": [
+    "candidates/<id>/workspace contains the prior harness source snapshot without nested .metaharness history.",
+    "candidates/<id>/manifest.json records score, validity, outcome, and parentage.",
+    "candidates/<id>/proposal contains proposer traces, diffs, and change attribution when available.",
+    "candidates/<id>/evaluation/search_result.json is search-time feedback; held-out test results are written only after search finalization."
+  ],
+  "parent_candidate_id": "c0000",
+  "prior_candidate_ids": [
+    "c0000"
+  ],
+  "schema_version": "metaharness.experience_index.v1"
+}

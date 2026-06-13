@@ -1,0 +1,27 @@
+{
+  "candidate_id": "c0000",
+  "change_attribution_summary": "",
+  "change_attribution_verdict_counts": {},
+  "change_manifest_change_count": 0,
+  "change_manifest_components": [],
+  "change_manifest_valid": null,
+  "frontier_rank": null,
+  "objective": 0.0,
+  "outcome": "baseline",
+  "outcome_summary": "Baseline candidate.",
+  "parent_candidate_ids": [],
+  "proposal_applied": true,
+  "scope_violation_paths": [],
+  "search_metrics": {
+    "score": 0.0,
+    "weight_hit": 0.0,
+    "weight_total": 8.0
+  },
+  "search_objective": 0.0,
+  "test_metrics": {},
+  "test_objective": null,
+  "test_valid": null,
+  "updated_at": "2026-06-13T22:31:55.491734+00:00",
+  "valid": true,
+  "workspace_dir": "/Users/shashi/oss/meta-harness/examples/omnigent_agent_benchmark/runs/tmphpaqe49g/candidates/c0000/workspace"
+}

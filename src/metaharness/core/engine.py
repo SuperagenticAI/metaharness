@@ -176,6 +176,7 @@ class MetaHarnessEngine:
             instructions=instructions,
             proposer_name=self.proposer.name,
             bootstrap=bootstrap,
+            allowed_write_paths=self.allowed_write_paths,
             trace_evidence_path=self.trace_evidence_path,
         )
         execution = self.proposer.invoke(self.proposer.prepare(proposal_request))

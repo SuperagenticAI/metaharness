@@ -1,0 +1,34 @@
+{
+  "objective": "Improve a small Omnigent agent harness so its config, instructions, sandbox scope, policy, and reviewer skill are suitable for coding-agent use.",
+  "constraints": [
+    "Keep the agent declarative and file-backed.",
+    "Focus edits on config.yaml, AGENTS.md, and skills.",
+    "Do not add external service dependencies."
+  ],
+  "baseline_dir": "baseline",
+  "runs_dir": "runs",
+  "tasks_file": "tasks.json",
+  "required_files": [
+    "config.yaml",
+    "AGENTS.md",
+    "skills/review/SKILL.md"
+  ],
+  "allowed_write_paths": [
+    "config.yaml",
+    "AGENTS.md",
+    "skills"
+  ],
+  "backends": {
+    "omnigent": {
+      "omnigent_binary": "omni",
+      "harness": "codex",
+      "model": null,
+      "sandbox_type": "darwin_seatbelt",
+      "allow_network": true,
+      "no_session": false,
+      "proposal_timeout_seconds": 300
+    }
+  },
+  "example_profile": "omnigent-agent",
+  "default_budget": 1
+}

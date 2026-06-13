@@ -1,0 +1,21 @@
+{
+  "candidate_ids": [
+    "c0001"
+  ],
+  "candidates": [
+    {
+      "candidate_id": "c0001",
+      "frontier_rank": 1,
+      "search_metrics": {
+        "score": 1.0,
+        "weight_hit": 8.0,
+        "weight_total": 8.0
+      },
+      "search_objective": 1.0,
+      "secondary_cost": null,
+      "test_metrics": {},
+      "test_objective": null
+    }
+  ],
+  "schema_version": "metaharness.frontier.v1"
+}

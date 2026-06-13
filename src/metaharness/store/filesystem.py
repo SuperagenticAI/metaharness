@@ -83,6 +83,7 @@ class FilesystemRunStore:
         instructions: AgentInstructions,
         proposer_name: str,
         bootstrap: EnvironmentBootstrap,
+        allowed_write_paths: list[str] | None = None,
         trace_evidence_path: Path | None = None,
     ) -> ProposalRequest:
         meta_dir = candidate.workspace_dir / ".metaharness"
@@ -161,6 +162,7 @@ class FilesystemRunStore:
             prompt_path=prompt_path,
             instructions=instructions,
             parent_candidate_ids=candidate.parent_candidate_ids,
+            allowed_write_paths=list(allowed_write_paths or []),
         )
 
     def write_proposal_result(self, candidate_id: str, result: ProposalResult) -> None:
@@ -659,6 +661,8 @@ class FilesystemRunStore:
     @staticmethod
     def _instructions_filename(proposer_name: str) -> str:
         if proposer_name == "codex":
+            return "AGENTS.md"
+        if proposer_name == "omnigent":
             return "AGENTS.md"
         if proposer_name == "gemini":
             return "GEMINI.md"

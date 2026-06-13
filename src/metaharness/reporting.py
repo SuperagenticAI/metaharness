@@ -375,7 +375,7 @@ def _extract_backend_summary(run_config: dict[str, Any], proposal: dict[str, Any
     if isinstance(metadata, dict):
         command = metadata.get("command", [])
         if isinstance(command, list):
-            model = _extract_command_flag(command, "-m")
+            model = _extract_command_flag(command, "-m") or _extract_command_flag(command, "--model")
 
     use_oss = bool(metadata.get("use_oss")) if isinstance(metadata, dict) else False
     local_provider = metadata.get("local_provider") if isinstance(metadata, dict) else None

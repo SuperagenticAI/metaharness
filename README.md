@@ -13,7 +13,7 @@
 It is inspired by the [Meta Harness paper](https://arxiv.org/pdf/2603.28052) and is an unofficial open source implementation of the core ideas in that work.
 The current benchmark evidence in this repository is centered on the Codex CLI path, including hosted Codex and Codex over local Ollama models.
 Codex is the primary and validated backend in this repository today.
-Gemini CLI is the only additional experimental integration.
+Gemini CLI and Omnigent are additional experimental integrations.
 
 It is built for teams who want to improve the code and files around an agent workflow, not just the prompt.
 That includes instruction files, setup flows, validation scripts, test scripts, routing logic, and other executable support code.
@@ -111,6 +111,7 @@ uv run metaharness experiment \
 - a provider-neutral proposer backend interface
 - a real `CodexExecBackend`
 - an experimental `GeminiCliBackend`
+- an experimental `OmnigentCliBackend` for `omni run` agent proposals
 - a deterministic `FakeBackend`
 - extension backends via `backend_plugins` (`module:callable` factories)
 - a coding-tool integration for instruction files and script-based harnesses
@@ -127,6 +128,7 @@ The repository currently includes:
 
 - two real coding-tool benchmark targets
 - a smaller deterministic ticket-router example
+- an Omnigent-agent benchmark target for optimizing declarative agent configs, instructions, skills, and policy shape
 - hosted Codex runs on the real benchmarks
 - local Codex over Ollama runs with `gpt-oss:20b` and `gpt-oss:120b`
 - a docs site published from GitHub Actions
@@ -149,10 +151,14 @@ Detailed experiment records:
 - hosted Codex is the strongest current path for real runs
 - local Codex over Ollama works and has been exercised with `gpt-oss:20b` and `gpt-oss:120b`
 - Gemini is implemented as an experimental backend and is not part of the main validated release path
+- Omnigent is implemented as an experimental backend for running `omni run` as a metaharness proposer
 
 All real provider results currently documented in this repository were produced through the Codex CLI path.
 That includes both hosted Codex runs and local Ollama runs driven through Codex with `gpt-oss` models.
 Other coding-agent evaluations in the wider ecosystem often emphasize Claude Code and Opus, but this repository's current benchmark evidence is Codex-first.
+
+The Omnigent integration has also been smoke-tested against the real Omnigent CLI from source.
+In that run, Omnigent improved the built-in Omnigent-agent benchmark from the baseline candidate to `c0001`, reached objective `0.875`, and stayed inside the allowed write scope.
 
 ## Documentation
 

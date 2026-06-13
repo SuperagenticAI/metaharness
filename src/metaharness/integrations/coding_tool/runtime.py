@@ -12,6 +12,7 @@ from ...models import EvaluationResult, ValidationResult
 from ...proposer.codex_exec import CodexExecBackend
 from ...proposer.fake import FakeBackend
 from ...proposer.gemini_cli import GeminiCliBackend
+from ...proposer.omnigent_cli import OmnigentCliBackend
 from .config import CodingToolProject, CodingToolTask
 
 
@@ -222,6 +223,19 @@ def make_backend(
             extra_args=[str(value) for value in options.get("extra_args", []) or []],
             timeout_seconds=_optional_float(options.get("proposal_timeout_seconds")),
         )
+    if name == "omnigent":
+        return OmnigentCliBackend(
+            omnigent_binary=_optional_string(options.get("omnigent_binary")) or "omni",
+            harness=_optional_string(options.get("harness")),
+            model=_optional_string(options.get("model")),
+            agent_config=_optional_string(options.get("agent_config")),
+            no_session=bool(options.get("no_session", True)),
+            sandbox_type=_optional_string(options.get("sandbox_type")),
+            allow_network=bool(options.get("allow_network", True)),
+            event_log_path=_optional_string(options.get("event_log_path")),
+            extra_args=[str(value) for value in options.get("extra_args", []) or []],
+            timeout_seconds=_optional_float(options.get("proposal_timeout_seconds")),
+        )
     if name == "fake":
         if project.example_profile == "coding-tool-python-fixture":
             return _coding_tool_python_fixture_fake_backend()
@@ -229,6 +243,8 @@ def make_backend(
             return _coding_tool_python_cli_fake_backend()
         if project.example_profile == "coding-tool-scaffold":
             return _coding_tool_scaffold_fake_backend()
+        if project.example_profile == "omnigent-agent":
+            return _coding_tool_omnigent_agent_fake_backend()
         return FakeBackend()
     plugin_config = project.backend_plugins.get(name)
     if plugin_config is not None:
@@ -443,6 +459,69 @@ def _coding_tool_python_cli_fake_backend() -> FakeBackend:
                         "set -euo pipefail\n\n"
                         "PYTHONPATH=fixture_repo/src .venv/bin/python -m unittest discover -s fixture_repo/tests -v\n"
                         "PYTHONPATH=fixture_repo/src .venv/bin/python -m benchcli.cli status --config fixture_repo/fixture_config.json | grep -q '^ready:3$'\n"
+                    ),
+                },
+            ],
+        }
+    )
+
+
+def _coding_tool_omnigent_agent_fake_backend() -> FakeBackend:
+    return FakeBackend(
+        mutation=lambda request: {
+            "summary": f"Improved Omnigent agent harness for {request.candidate_id}.",
+            "final_text": "Updated config.yaml, AGENTS.md, and the review skill.",
+            "files": [
+                {
+                    "relative_path": "config.yaml",
+                    "content": (
+                        "spec_version: 1\n"
+                        "name: metaharness_coding_agent\n"
+                        "description: Omnigent coding agent optimized by metaharness.\n\n"
+                        "instructions: AGENTS.md\n\n"
+                        "executor:\n"
+                        "  type: omnigent\n"
+                        "  config:\n"
+                        "    harness: codex-native\n\n"
+                        "async: true\n"
+                        "cancellable: true\n\n"
+                        "os_env:\n"
+                        "  type: caller_process\n"
+                        "  cwd: .\n"
+                        "  sandbox:\n"
+                        "    type: darwin_seatbelt\n"
+                        "    allow_network: true\n"
+                        "    write_paths:\n"
+                        "      - .\n\n"
+                        "policies:\n"
+                        "  metaharness_enforce_sandbox:\n"
+                        "    type: function\n"
+                        "    handler: omnigent.policies.builtins.safety.enforce_sandbox\n"
+                        "    factory_params:\n"
+                        "      sandbox_type: darwin_seatbelt\n"
+                        "      allow_network: true\n"
+                        "      write_paths:\n"
+                        "        - .\n\n"
+                        "skills:\n"
+                        "  review: skills/review/SKILL.md\n"
+                    ),
+                },
+                {
+                    "relative_path": "AGENTS.md",
+                    "content": (
+                        "# Project Instructions\n\n"
+                        "- Inspect the repository before editing.\n"
+                        "- Never use destructive git commands such as `git reset --hard` or `git checkout --`.\n"
+                        "- Inspect validation and evaluation feedback under .metaharness before editing.\n"
+                        "- Review proposal/result.json and proposal/events.json when diagnosing Omnigent runs.\n"
+                    ),
+                },
+                {
+                    "relative_path": "skills/review/SKILL.md",
+                    "content": (
+                        "# Review Skill\n\n"
+                        "Focus on correctness, tests, security, and maintainability.\n"
+                        "Check that the agent config, instructions, sandbox, and policies match the task contract.\n"
                     ),
                 },
             ],

@@ -7,7 +7,7 @@ It is written for newcomers first.
 
 - Python 3.11 or newer
 - [`uv`](https://docs.astral.sh/uv/)
-- optional: `codex` or `gemini` CLI for live provider runs
+- optional: `codex`, `gemini`, or `omni` CLI for live provider runs
 - optional: Ollama with `gpt-oss:20b` or `gpt-oss:120b` for local runs
 
 ## Install

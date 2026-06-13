@@ -7,6 +7,7 @@ from unittest.mock import patch
 from metaharness.integrations.coding_tool.config import load_coding_tool_project
 from metaharness.integrations.coding_tool.runtime import _resolve_command_shell, make_backend, resolve_backend_options
 from metaharness.proposer.fake import FakeBackend
+from metaharness.proposer.omnigent_cli import OmnigentCliBackend
 
 
 class CodingToolConfigTests(unittest.TestCase):
@@ -172,6 +173,51 @@ class CodingToolConfigTests(unittest.TestCase):
             self.assertEqual("default", backend.approval_mode)
             self.assertEqual("workspace-write", backend.sandbox)
             self.assertEqual(45.0, backend.timeout_seconds)
+
+    def test_make_backend_applies_omnigent_backend_config(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            (root / "baseline").mkdir()
+            (root / "tasks.json").write_text("[]", encoding="utf-8")
+            (root / "metaharness.json").write_text(
+                """
+                {
+                  "objective": "demo",
+                  "constraints": [],
+                  "required_files": [],
+                  "backends": {
+                    "omnigent": {
+                      "omnigent_binary": "omnigent",
+                      "harness": "codex-native",
+                      "model": "gpt-5.3-codex",
+                      "agent_config": "agents/proposer/config.yaml",
+                      "no_session": false,
+                      "sandbox_type": "linux_bwrap",
+                      "allow_network": false,
+                      "event_log_path": ".metaharness/omnigent-events.jsonl",
+                      "extra_args": ["--no-browser"],
+                      "proposal_timeout_seconds": 90
+                    }
+                  }
+                }
+                """.strip(),
+                encoding="utf-8",
+            )
+
+            project = load_coding_tool_project(root)
+            backend = make_backend("omnigent", project)
+
+            self.assertIsInstance(backend, OmnigentCliBackend)
+            self.assertEqual("omnigent", backend.omnigent_binary)
+            self.assertEqual("codex-native", backend.harness)
+            self.assertEqual("gpt-5.3-codex", backend.model)
+            self.assertEqual("agents/proposer/config.yaml", backend.agent_config)
+            self.assertFalse(backend.no_session)
+            self.assertEqual("linux_bwrap", backend.sandbox_type)
+            self.assertFalse(backend.allow_network)
+            self.assertEqual(".metaharness/omnigent-events.jsonl", backend.event_log_path)
+            self.assertEqual(["--no-browser"], backend.extra_args)
+            self.assertEqual(90.0, backend.timeout_seconds)
 
     def test_load_project_reads_backend_plugins(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

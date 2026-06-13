@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.0] - 2026-06-13
+
+### Added
+- Experimental `OmnigentCliBackend` proposer backend for running candidate proposals through `omni run`.
+- Per-candidate generated Omnigent agent bundles under `.metaharness/omnigent_agent/config.yaml`, with copies archived at `proposal/omnigent_agent.yaml`.
+- Mapping from `allowed_write_paths` into generated Omnigent sandbox write paths and a `metaharness_enforce_sandbox` policy.
+- Omnigent event parsing for JSON, JSONL, and SSE-style streams, with normalized proposal events, final text, changed files, token usage, tool-call count, cost, and file read/write telemetry.
+- Example Omnigent-agent optimization benchmark at `examples/omnigent_agent_benchmark`.
+- Real Omnigent smoke coverage proving the backend can improve an Omnigent agent candidate: `best_candidate_id=c0001`, `best_objective=0.875`, and no scope violations in the verified run.
+
+### Changed
+- Coding-tool backend configuration now accepts `backend: "omnigent"` with Omnigent CLI options.
+- Candidate proposal requests now carry `allowed_write_paths` so proposer backends can enforce or translate write scope earlier.
+- Omnigent-generated instruction files use `AGENTS.md` to match Omnigent and Codex conventions.
+- Provider docs now document Omnigent setup, generated agent config, telemetry import, and practical backend selection guidance.
+
+### Fixed
+- Omnigent backend now pins generated agent `os_env.cwd` to the absolute candidate workspace, avoiding accidental execution relative to the generated agent bundle.
+- Omnigent/Codex private `.codex-tmp` runtime scratch is cleaned before metaharness computes diffs and write-scope violations.
+- Omnigent result extraction now prefers useful proposal stdout over startup warnings emitted on stderr.
+
 ## [0.3.0] - 2026-05-26
 
 ### Added

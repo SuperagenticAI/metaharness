@@ -1,0 +1,16 @@
+[
+  {
+    "command": null,
+    "file_changes": [
+      "config.yaml",
+      "AGENTS.md",
+      "skills/review/SKILL.md"
+    ],
+    "kind": "file_change",
+    "output": null,
+    "raw": null,
+    "text": "Improved Omnigent agent harness for c0001.",
+    "tool_name": null,
+    "ts": null
+  }
+]

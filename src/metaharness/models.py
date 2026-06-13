@@ -48,6 +48,7 @@ class ProposalRequest:
     prompt_path: Path
     instructions: AgentInstructions
     parent_candidate_ids: list[str]
+    allowed_write_paths: list[str] = field(default_factory=list)
 
 
 @dataclass(slots=True)

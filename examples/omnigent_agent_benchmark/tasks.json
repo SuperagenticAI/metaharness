@@ -1,0 +1,89 @@
+[
+  {
+    "id": "agent-name",
+    "type": "file_phrase",
+    "path": "config.yaml",
+    "weight": 0.5,
+    "required_phrases": [
+      "name: metaharness_coding_agent"
+    ]
+  },
+  {
+    "id": "instructions-file",
+    "type": "file_phrase",
+    "path": "config.yaml",
+    "weight": 1.0,
+    "required_phrases": [
+      "instructions: AGENTS.md"
+    ]
+  },
+  {
+    "id": "codex-native-harness",
+    "type": "file_phrase",
+    "path": "config.yaml",
+    "weight": 1.0,
+    "required_phrases": [
+      "harness: codex-native"
+    ]
+  },
+  {
+    "id": "sandbox-write-scope",
+    "type": "file_phrase",
+    "path": "config.yaml",
+    "weight": 1.0,
+    "required_phrases": [
+      "write_paths:",
+      "- ."
+    ]
+  },
+  {
+    "id": "safety-policy",
+    "type": "file_phrase",
+    "path": "config.yaml",
+    "weight": 1.0,
+    "required_phrases": [
+      "metaharness_enforce_sandbox",
+      "omnigent.policies.builtins.safety.enforce_sandbox"
+    ]
+  },
+  {
+    "id": "review-skill-declared",
+    "type": "file_phrase",
+    "path": "config.yaml",
+    "weight": 0.5,
+    "required_phrases": [
+      "skills/review/SKILL.md"
+    ]
+  },
+  {
+    "id": "agent-instructions-safety",
+    "type": "file_phrase",
+    "path": "AGENTS.md",
+    "weight": 1.0,
+    "required_phrases": [
+      "Never use destructive git commands",
+      "git reset --hard",
+      "git checkout --"
+    ]
+  },
+  {
+    "id": "agent-instructions-metaharness",
+    "type": "file_phrase",
+    "path": "AGENTS.md",
+    "weight": 1.0,
+    "required_phrases": [
+      "Inspect validation and evaluation feedback under .metaharness before editing.",
+      "Review proposal/result.json and proposal/events.json when diagnosing Omnigent runs."
+    ]
+  },
+  {
+    "id": "review-skill-content",
+    "type": "file_phrase",
+    "path": "skills/review/SKILL.md",
+    "weight": 1.0,
+    "required_phrases": [
+      "# Review Skill",
+      "Focus on correctness, tests, security, and maintainability."
+    ]
+  }
+]

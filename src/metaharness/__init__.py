@@ -12,6 +12,7 @@ from .models import (
 from .proposer.codex_exec import CodexExecBackend
 from .proposer.fake import FakeBackend
 from .proposer.gemini_cli import GeminiCliBackend
+from .proposer.omnigent_cli import OmnigentCliBackend
 
 __all__ = [
     "AgentEvent",
@@ -22,6 +23,7 @@ __all__ = [
     "GeminiCliBackend",
     "LegacyDomainAdapter",
     "OptimizeResult",
+    "OmnigentCliBackend",
     "ProposalRequest",
     "ProposalResult",
     "ValidationResult",

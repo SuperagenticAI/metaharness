@@ -1,0 +1,14 @@
+[
+  {
+    "kind": "modified",
+    "path": "AGENTS.md"
+  },
+  {
+    "kind": "modified",
+    "path": "config.yaml"
+  },
+  {
+    "kind": "modified",
+    "path": "skills/review/SKILL.md"
+  }
+]

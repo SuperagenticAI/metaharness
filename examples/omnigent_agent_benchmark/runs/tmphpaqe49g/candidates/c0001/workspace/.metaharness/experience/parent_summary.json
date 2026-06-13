@@ -1,0 +1,10 @@
+{
+  "constraints": [
+    "Keep the agent declarative and file-backed.",
+    "Focus edits on config.yaml, AGENTS.md, and skills.",
+    "Do not add external service dependencies.",
+    "Only modify files within the allowed write scope: config.yaml, AGENTS.md, skills"
+  ],
+  "parent_candidate_id": "c0000",
+  "parent_objective": 0.0
+}

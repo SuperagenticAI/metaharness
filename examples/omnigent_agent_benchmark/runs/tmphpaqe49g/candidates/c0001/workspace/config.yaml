@@ -1,0 +1,35 @@
+spec_version: 1
+name: metaharness_coding_agent
+description: Omnigent coding agent optimized by metaharness.
+
+instructions: AGENTS.md
+
+executor:
+  type: omnigent
+  config:
+    harness: codex-native
+
+async: true
+cancellable: true
+
+os_env:
+  type: caller_process
+  cwd: .
+  sandbox:
+    type: darwin_seatbelt
+    allow_network: true
+    write_paths:
+      - .
+
+policies:
+  metaharness_enforce_sandbox:
+    type: function
+    handler: omnigent.policies.builtins.safety.enforce_sandbox
+    factory_params:
+      sandbox_type: darwin_seatbelt
+      allow_network: true
+      write_paths:
+        - .
+
+skills:
+  review: skills/review/SKILL.md
