@@ -94,6 +94,7 @@ class MetaHarnessEngine:
 
         baseline = self.store.materialize_baseline(self.baseline)
         baseline.proposal_applied = True
+        baseline.clean_exit = True
         baseline_validation = self.domain_adapter.validate(baseline.workspace_dir)
         self.store.write_validation_result(baseline.candidate_id, baseline_validation)
         baseline.valid = baseline_validation.ok
@@ -102,6 +103,9 @@ class MetaHarnessEngine:
             self.store.write_search_evaluation_result(baseline.candidate_id, baseline_eval)
             baseline.search_objective = baseline_eval.objective
             baseline.search_metrics = dict(baseline_eval.metrics)
+            baseline.functional_objective = baseline_eval.objective
+            baseline.functional_metrics = dict(baseline_eval.metrics)
+            baseline.functional_valid = True
             baseline.objective = baseline.search_objective
         else:
             baseline.search_objective = float("-inf")
@@ -195,9 +199,22 @@ class MetaHarnessEngine:
         }
         workspace_change_count = int(diff_metadata["workspace_change_count"])
         candidate.proposal_applied = proposal_result.applied
+        candidate.timed_out = bool(proposal_result.metadata.get("timed_out"))
+        candidate.clean_exit = proposal_result.applied and not candidate.timed_out
+        candidate.proposal_returncode = self._optional_int(proposal_result.metadata.get("returncode"))
+        candidate.proposal_duration_seconds = self._optional_float(
+            proposal_result.metadata.get("duration_seconds")
+        )
         self.store.write_proposal_result(candidate.candidate_id, proposal_result)
 
         if not proposal_result.applied:
+            if candidate.timed_out:
+                self._evaluate_timeout_snapshot(
+                    parent=parent,
+                    candidate=candidate,
+                    changed_files=proposal_result.changed_files,
+                    workspace_change_count=workspace_change_count,
+                )
             candidate.valid = False
             candidate.search_objective = float("-inf")
             candidate.objective = float("-inf")
@@ -223,6 +240,9 @@ class MetaHarnessEngine:
             candidate.test_objective = parent.test_objective
             candidate.search_metrics = dict(parent.search_metrics)
             candidate.test_metrics = dict(parent.test_metrics)
+            candidate.functional_objective = parent.functional_objective
+            candidate.functional_metrics = dict(parent.functional_metrics)
+            candidate.functional_valid = parent.functional_valid
             candidate.objective = parent.objective
             candidate.test_valid = parent.test_valid
             candidate.outcome = "no-change"
@@ -244,9 +264,56 @@ class MetaHarnessEngine:
         self.store.write_change_attribution(parent=parent, candidate=candidate, candidate_evaluation=search_eval)
         candidate.search_objective = search_eval.objective
         candidate.search_metrics = dict(search_eval.metrics)
+        candidate.functional_objective = search_eval.objective
+        candidate.functional_metrics = dict(search_eval.metrics)
+        candidate.functional_valid = True
         candidate.objective = candidate.search_objective
         candidate.outcome = "unknown"
         candidate.outcome_summary = ""
+
+    def _evaluate_timeout_snapshot(
+        self,
+        *,
+        parent: CandidateRecord,
+        candidate: CandidateRecord,
+        changed_files: Sequence[str],
+        workspace_change_count: int,
+    ) -> None:
+        if workspace_change_count == 0:
+            candidate.functional_objective = parent.functional_objective
+            candidate.functional_metrics = dict(parent.functional_metrics)
+            candidate.functional_valid = parent.functional_valid
+            return
+        if violation_paths := self._scope_violations(changed_files):
+            candidate.scope_violation_paths = violation_paths
+            candidate.functional_valid = False
+            return
+
+        snapshot_dir = self.store.materialize_timeout_snapshot(candidate)
+        validation = self.domain_adapter.validate(snapshot_dir)
+        self.store.write_shadow_validation_result(candidate.candidate_id, validation)
+        candidate.functional_valid = validation.ok
+        if not validation.ok:
+            return
+
+        evaluation = self.domain_adapter.evaluate_search(snapshot_dir)
+        self.store.write_shadow_evaluation_result(candidate.candidate_id, evaluation)
+        candidate.functional_objective = evaluation.objective
+        candidate.functional_metrics = dict(evaluation.metrics)
+
+    @staticmethod
+    def _optional_int(value) -> int | None:
+        try:
+            return int(value) if value is not None else None
+        except (TypeError, ValueError):
+            return None
+
+    @staticmethod
+    def _optional_float(value) -> float | None:
+        try:
+            return float(value) if value is not None else None
+        except (TypeError, ValueError):
+            return None
 
     def _effective_batch_size(self) -> int:
         if self.search_mode == "hill-climb":
@@ -390,6 +457,8 @@ class MetaHarnessEngine:
         for path in changed_files:
             normalized_path = self._normalize_relative_path(path)
             if normalized_path is None:
+                continue
+            if self.store.is_transient_path(normalized_path):
                 continue
             if not any(self._path_is_allowed(normalized_path, allowed) for allowed in self.allowed_write_paths):
                 violations.append(normalized_path)

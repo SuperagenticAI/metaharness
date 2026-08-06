@@ -64,7 +64,16 @@ class CodingToolConfigTests(unittest.TestCase):
                       "local_provider": "ollama",
                       "model": "gpt-oss:20b",
                       "approval_policy": "never",
-                      "sandbox_mode": "workspace-write"
+                      "sandbox_mode": "workspace-write",
+                      "codex_home": ".codex-automation",
+                      "reasoning_effort": "low",
+                      "ephemeral": true,
+                      "feature_overrides": {
+                        "hooks": false,
+                        "multi_agent": false
+                      },
+                      "skip_git_repo_check": false,
+                      "isolated_home": true
                     }
                   }
                 }
@@ -79,6 +88,12 @@ class CodingToolConfigTests(unittest.TestCase):
             self.assertEqual("ollama", backend.local_provider)
             self.assertEqual("gpt-oss:20b", backend.model)
             self.assertIsNone(backend.timeout_seconds)
+            self.assertEqual(str((root / ".codex-automation").resolve()), backend.codex_home)
+            self.assertEqual("low", backend.reasoning_effort)
+            self.assertTrue(backend.ephemeral)
+            self.assertEqual({"hooks": False, "multi_agent": False}, backend.feature_overrides)
+            self.assertFalse(backend.skip_git_repo_check)
+            self.assertTrue(backend.isolated_home)
             self.assertEqual([], project.allowed_write_paths)
 
     def test_make_backend_can_override_local_codex_config_to_hosted(self) -> None:

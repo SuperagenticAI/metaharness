@@ -167,6 +167,38 @@ class CandidateOutcomeTests(unittest.TestCase):
             self.assertEqual(["rogue.txt"], manifest["scope_violation_paths"])
             self.assertEqual(1, summary["scope_violation_candidate_count"])
 
+    def test_runtime_artifacts_do_not_violate_write_scope(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            baseline = root / "demo_project" / "baseline"
+            baseline.mkdir(parents=True)
+            (baseline / "message.txt").write_text("baseline\n", encoding="utf-8")
+            run_dir = root / "demo_project" / "runs" / "demo"
+
+            result = optimize_harness(
+                baseline=baseline,
+                proposer=FakeBackend(
+                    mutation=lambda request: {
+                        "files": [
+                            {"relative_path": "message.txt", "content": "this is better\n"},
+                            {"relative_path": ".venv/bin/python", "content": "runtime shim\n"},
+                            {"relative_path": "fixture/__pycache__/module.pyc", "content": "compiled\n"},
+                        ]
+                    }
+                ),
+                validator=OutcomeValidator(),
+                evaluator=OutcomeEvaluator(),
+                run_dir=run_dir,
+                budget=1,
+                objective="Ignore declared runtime artifacts.",
+                allowed_write_paths=["message.txt"],
+            )
+
+            manifest = json.loads((run_dir / "candidates" / "c0001" / "manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual("c0001", result.best_candidate_id)
+            self.assertEqual("keep", manifest["outcome"])
+            self.assertEqual([], manifest["scope_violation_paths"])
+
 
 if __name__ == "__main__":
     unittest.main()

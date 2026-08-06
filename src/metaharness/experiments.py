@@ -25,6 +25,8 @@ _TRIAL_TSV_COLUMNS = (
     "best_candidate_id",
     "best_candidate_outcome",
     "best_objective",
+    "best_functional_candidate_id",
+    "best_functional_objective",
     "best_test_objective",
     "baseline_objective",
     "improved",
@@ -37,6 +39,9 @@ _TRIAL_TSV_COLUMNS = (
     "crash_candidate_count",
     "timeout_candidate_count",
     "scope_violation_candidate_count",
+    "clean_exit_count",
+    "functional_valid_candidate_count",
+    "mean_proposal_duration_seconds",
     "duration_seconds",
     "time_to_first_improvement_seconds",
     "proposal_timeout_seconds",
@@ -54,13 +59,17 @@ _AGGREGATE_TSV_COLUMNS = (
     "improved_count",
     "success_rate",
     "mean_best_objective",
+    "mean_best_functional_objective",
     "mean_best_test_objective",
     "max_best_objective",
     "mean_duration_seconds",
+    "mean_proposal_duration_seconds",
     "mean_time_to_first_improvement_seconds",
     "timeout_run_rate",
     "crash_run_rate",
     "scope_violation_run_rate",
+    "clean_exit_run_rate",
+    "functional_valid_run_rate",
     "mean_keep_candidate_count",
 )
 
@@ -188,6 +197,10 @@ def aggregate_experiment_trials(trial_rows: Sequence[dict[str, Any]]) -> list[di
         timeout_runs = sum(1 for row in rows if int(row.get("timeout_candidate_count", 0)) > 0)
         crash_runs = sum(1 for row in rows if int(row.get("crash_candidate_count", 0)) > 0)
         scope_violation_runs = sum(1 for row in rows if int(row.get("scope_violation_candidate_count", 0)) > 0)
+        clean_exit_runs = sum(1 for row in rows if int(row.get("clean_exit_count", 0)) > 0)
+        functional_valid_runs = sum(
+            1 for row in rows if int(row.get("functional_valid_candidate_count", 0)) > 0
+        )
         aggregates.append(
             {
                 "benchmark_name": benchmark_name,
@@ -199,15 +212,23 @@ def aggregate_experiment_trials(trial_rows: Sequence[dict[str, Any]]) -> list[di
                 "improved_count": improved_count,
                 "success_rate": _ratio(improved_count, trial_count),
                 "mean_best_objective": _mean(row.get("best_objective") for row in rows),
+                "mean_best_functional_objective": _mean(
+                    row.get("best_functional_objective") for row in rows
+                ),
                 "mean_best_test_objective": _mean(row.get("best_test_objective") for row in rows),
                 "max_best_objective": _max(row.get("best_objective") for row in rows),
                 "mean_duration_seconds": _mean(row.get("duration_seconds") for row in rows),
+                "mean_proposal_duration_seconds": _mean(
+                    row.get("mean_proposal_duration_seconds") for row in rows
+                ),
                 "mean_time_to_first_improvement_seconds": _mean(
                     row.get("time_to_first_improvement_seconds") for row in rows
                 ),
                 "timeout_run_rate": _ratio(timeout_runs, trial_count),
                 "crash_run_rate": _ratio(crash_runs, trial_count),
                 "scope_violation_run_rate": _ratio(scope_violation_runs, trial_count),
+                "clean_exit_run_rate": _ratio(clean_exit_runs, trial_count),
+                "functional_valid_run_rate": _ratio(functional_valid_runs, trial_count),
                 "mean_keep_candidate_count": _mean(row.get("keep_candidate_count") for row in rows),
             }
         )
@@ -290,6 +311,8 @@ def _trial_row(
         "best_candidate_id": run_summary.get("best_candidate_id"),
         "best_candidate_outcome": run_summary.get("best_candidate_outcome"),
         "best_objective": run_summary.get("best_objective"),
+        "best_functional_candidate_id": run_summary.get("best_functional_candidate_id"),
+        "best_functional_objective": run_summary.get("best_functional_objective"),
         "best_test_objective": run_summary.get("best_test_objective"),
         "baseline_objective": run_summary.get("baseline_objective"),
         "improved": run_summary.get("improved"),
@@ -302,6 +325,9 @@ def _trial_row(
         "crash_candidate_count": run_summary.get("crash_candidate_count"),
         "timeout_candidate_count": run_summary.get("timeout_candidate_count"),
         "scope_violation_candidate_count": run_summary.get("scope_violation_candidate_count"),
+        "clean_exit_count": run_summary.get("clean_exit_count"),
+        "functional_valid_candidate_count": run_summary.get("functional_valid_candidate_count"),
+        "mean_proposal_duration_seconds": run_summary.get("mean_proposal_duration_seconds"),
         "duration_seconds": run_summary.get("duration_seconds"),
         "time_to_first_improvement_seconds": run_summary.get("time_to_first_improvement_seconds"),
         "proposal_timeout_seconds": run_summary.get("proposal_timeout_seconds"),

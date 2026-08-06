@@ -10,7 +10,7 @@ class OmnigentAgentBenchmarkTests(unittest.TestCase):
         repo_root = Path(__file__).resolve().parents[1]
         example_dir = repo_root / "examples" / "omnigent_agent_benchmark"
         with tempfile.TemporaryDirectory() as tmpdir:
-            run_name = Path(tmpdir).name
+            run_name = str(Path(tmpdir) / "run")
             completed = subprocess.run(
                 [
                     "python",

@@ -56,6 +56,12 @@ def main(argv: list[str] | None = None) -> int:
     run_parser.add_argument("--local-provider", choices=["ollama", "lmstudio"], default=None)
     run_parser.add_argument("--model", default=None)
     run_parser.add_argument("--proposal-timeout", type=float, default=None)
+    run_parser.add_argument("--codex-home", default=None)
+    run_parser.add_argument("--reasoning-effort", choices=["low", "medium", "high", "xhigh"], default=None)
+    run_parser.add_argument("--ephemeral", action=argparse.BooleanOptionalAction, default=None)
+    run_parser.add_argument("--disable-codex-feature", action="append", default=None)
+    run_parser.add_argument("--require-git-repo", action="store_true")
+    run_parser.add_argument("--isolated-codex-home", action=argparse.BooleanOptionalAction, default=None)
     run_parser.add_argument("--search-mode", choices=["hill-climb", "frontier"], default=None)
     run_parser.add_argument("--proposal-batch-size", type=int, default=None)
     run_parser.add_argument("--selection-policy", choices=["single", "pareto"], default=None)
@@ -79,6 +85,12 @@ def main(argv: list[str] | None = None) -> int:
     experiment_parser.add_argument("--oss", action="store_true")
     experiment_parser.add_argument("--local-provider", choices=["ollama", "lmstudio"], default=None)
     experiment_parser.add_argument("--proposal-timeout", type=float, default=None)
+    experiment_parser.add_argument("--codex-home", default=None)
+    experiment_parser.add_argument("--reasoning-effort", choices=["low", "medium", "high", "xhigh"], default=None)
+    experiment_parser.add_argument("--ephemeral", action=argparse.BooleanOptionalAction, default=None)
+    experiment_parser.add_argument("--disable-codex-feature", action="append", default=None)
+    experiment_parser.add_argument("--require-git-repo", action="store_true")
+    experiment_parser.add_argument("--isolated-codex-home", action=argparse.BooleanOptionalAction, default=None)
     experiment_parser.add_argument("--search-mode", choices=["hill-climb", "frontier"], default=None)
     experiment_parser.add_argument("--proposal-batch-size", type=int, default=None)
     experiment_parser.add_argument("--selection-policy", choices=["single", "pareto"], default=None)
@@ -96,6 +108,12 @@ def main(argv: list[str] | None = None) -> int:
     smoke_codex_parser.add_argument("--local-provider", choices=["ollama", "lmstudio"], default=None)
     smoke_codex_parser.add_argument("--model", default=None)
     smoke_codex_parser.add_argument("--proposal-timeout", type=float, default=None)
+    smoke_codex_parser.add_argument("--codex-home", default=None)
+    smoke_codex_parser.add_argument("--reasoning-effort", choices=["low", "medium", "high", "xhigh"], default=None)
+    smoke_codex_parser.add_argument("--ephemeral", action=argparse.BooleanOptionalAction, default=None)
+    smoke_codex_parser.add_argument("--disable-codex-feature", action="append", default=None)
+    smoke_codex_parser.add_argument("--require-git-repo", action="store_true")
+    smoke_codex_parser.add_argument("--isolated-codex-home", action=argparse.BooleanOptionalAction, default=None)
     smoke_codex_parser.add_argument("--search-mode", choices=["hill-climb", "frontier"], default=None)
     smoke_codex_parser.add_argument("--proposal-batch-size", type=int, default=None)
     smoke_codex_parser.add_argument("--selection-policy", choices=["single", "pareto"], default=None)
@@ -517,20 +535,35 @@ def _backend_overrides_from_args(args: argparse.Namespace) -> dict[str, Any] | N
     if getattr(args, "hosted", False) and getattr(args, "oss", False):
         raise SystemExit("--hosted cannot be combined with --oss")
 
+    execution_overrides = {
+        "codex_home": getattr(args, "codex_home", None),
+        "reasoning_effort": getattr(args, "reasoning_effort", None),
+        "ephemeral": getattr(args, "ephemeral", None),
+        "feature_overrides": (
+            {str(name): False for name in getattr(args, "disable_codex_feature", None) or []}
+            if getattr(args, "disable_codex_feature", None)
+            else None
+        ),
+        "skip_git_repo_check": False if getattr(args, "require_git_repo", False) else None,
+        "isolated_home": getattr(args, "isolated_codex_home", None),
+    }
+
     if getattr(args, "hosted", False):
         overrides = {
             "use_oss": False,
             "local_provider": "",
             "model": getattr(args, "model", None) if getattr(args, "model", None) is not None else "",
             "proposal_timeout_seconds": getattr(args, "proposal_timeout", None),
+            **execution_overrides,
         }
-        return overrides
+        return {key: value for key, value in overrides.items() if value is not None}
 
     overrides = {
         "use_oss": getattr(args, "oss", None) or None,
         "local_provider": getattr(args, "local_provider", None),
         "model": getattr(args, "model", None),
         "proposal_timeout_seconds": getattr(args, "proposal_timeout", None),
+        **execution_overrides,
     }
     filtered = {key: value for key, value in overrides.items() if value is not None}
     return filtered or None

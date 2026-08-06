@@ -47,6 +47,20 @@ class InstructionRenderingTests(unittest.TestCase):
         self.assertIn("hallucinated tool calls in trace-1", prompt)
         self.assertIn(".metaharness/change_manifest.json", prompt)
 
+    def test_build_backend_prompt_has_bounded_completion_contract(self) -> None:
+        prompt = build_backend_prompt(
+            "codex",
+            Path("/tmp/project/AGENTS.md"),
+            Path("/tmp/project"),
+            parent_feedback_text="- test-command: command failed",
+        )
+        self.assertIn("Parent failures", prompt)
+        self.assertIn("test-command: command failed", prompt)
+        self.assertIn("return immediately", prompt)
+        self.assertIn("Do not launch collaborators", prompt)
+        self.assertIn("confirm its own exit status", prompt)
+        self.assertNotIn("Compare successful and failed prior candidates", prompt)
+
 
 if __name__ == "__main__":
     unittest.main()

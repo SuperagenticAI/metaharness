@@ -1,8 +1,13 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import subprocess
+import time
+import tempfile
+from contextlib import contextmanager
+from pathlib import Path
 from shutil import which
 from typing import Any
 from urllib.error import URLError
@@ -27,6 +32,12 @@ class CodexExecBackend(ProposerBackend):
         use_oss: bool = False,
         local_provider: str | None = None,
         timeout_seconds: float | None = None,
+        codex_home: str | None = None,
+        reasoning_effort: str | None = None,
+        ephemeral: bool = False,
+        feature_overrides: dict[str, bool] | None = None,
+        skip_git_repo_check: bool = True,
+        isolated_home: bool = False,
     ) -> None:
         self.codex_binary = codex_binary
         self.model = model
@@ -37,6 +48,13 @@ class CodexExecBackend(ProposerBackend):
         self.use_oss = use_oss
         self.local_provider = local_provider
         self.timeout_seconds = timeout_seconds
+        self.codex_home = codex_home
+        self.reasoning_effort = reasoning_effort
+        self.ephemeral = ephemeral
+        self.feature_overrides = dict(feature_overrides or {})
+        self.skip_git_repo_check = skip_git_repo_check
+        self.isolated_home = isolated_home
+        self._codex_version: str | None = None
 
     def prepare(self, request: ProposalRequest) -> ProposalRequest:
         return request
@@ -48,7 +66,14 @@ class CodexExecBackend(ProposerBackend):
         stderr_path = proposal_dir / "stderr.txt"
         last_message_path = proposal_dir / "last_message.txt"
 
-        command = [self.codex_binary, "-a", self.approval_policy, "exec"]
+        command = [self.codex_binary, "-a", self.approval_policy]
+        if self.reasoning_effort:
+            command.extend(["-c", f'model_reasoning_effort="{self.reasoning_effort}"'])
+        for feature_name, enabled in sorted(self.feature_overrides.items()):
+            command.extend(["-c", f"features.{feature_name}={'true' if enabled else 'false'}"])
+        command.append("exec")
+        if self.ephemeral:
+            command.append("--ephemeral")
         if self.model:
             command.extend(["-m", self.model])
         if self.use_oss:
@@ -58,7 +83,6 @@ class CodexExecBackend(ProposerBackend):
         command.extend(
             [
                 "--json",
-                "--skip-git-repo-check",
                 "-C",
                 str(request.workspace_dir),
                 "-s",
@@ -68,6 +92,8 @@ class CodexExecBackend(ProposerBackend):
                 "-",
             ]
         )
+        if self.skip_git_repo_check:
+            command.insert(command.index("-C"), "--skip-git-repo-check")
         for extra_dir in self.extra_writable_dirs:
             command.extend(["--add-dir", extra_dir])
         command.extend(self.extra_args)
@@ -75,30 +101,34 @@ class CodexExecBackend(ProposerBackend):
         prompt = request.prompt_path.read_text(encoding="utf-8")
         timed_out = False
         timeout_message = ""
-        try:
-            completed = subprocess.run(
-                command,
-                input=prompt,
-                text=True,
-                cwd=request.workspace_dir,
-                capture_output=True,
-                timeout=self.timeout_seconds,
-            )
-            stdout = completed.stdout
-            stderr = completed.stderr
-            returncode = completed.returncode
-        except subprocess.TimeoutExpired as exc:
-            timed_out = True
-            stdout = _coerce_timeout_stream(exc.stdout)
-            stderr = _coerce_timeout_stream(exc.stderr)
-            timeout_message = (
-                f"Codex proposal timed out after {self.timeout_seconds:g}s."
-                if self.timeout_seconds is not None
-                else "Codex proposal timed out."
-            )
-            if timeout_message not in stderr:
-                stderr = f"{stderr}\n{timeout_message}".strip()
-            returncode = 124
+        started_at = time.monotonic()
+        with self._execution_environment() as environment:
+            try:
+                completed = subprocess.run(
+                    command,
+                    input=prompt,
+                    text=True,
+                    cwd=request.workspace_dir,
+                    capture_output=True,
+                    timeout=self.timeout_seconds,
+                    env=environment,
+                )
+                stdout = completed.stdout
+                stderr = completed.stderr
+                returncode = completed.returncode
+            except subprocess.TimeoutExpired as exc:
+                timed_out = True
+                stdout = _coerce_timeout_stream(exc.stdout)
+                stderr = _coerce_timeout_stream(exc.stderr)
+                timeout_message = (
+                    f"Codex proposal timed out after {self.timeout_seconds:g}s."
+                    if self.timeout_seconds is not None
+                    else "Codex proposal timed out."
+                )
+                if timeout_message not in stderr:
+                    stderr = f"{stderr}\n{timeout_message}".strip()
+                returncode = 124
+        duration_seconds = time.monotonic() - started_at
 
         stdout_path.write_text(stdout, encoding="utf-8")
         stderr_path.write_text(stderr, encoding="utf-8")
@@ -110,7 +140,11 @@ class CodexExecBackend(ProposerBackend):
             stderr_path=stderr_path,
             last_message_path=last_message_path,
             returncode=returncode,
-            metadata={"timed_out": timed_out, "timeout_message": timeout_message},
+            metadata={
+                "timed_out": timed_out,
+                "timeout_message": timeout_message,
+                "duration_seconds": duration_seconds,
+            },
         )
 
     def collect(self, execution: ProposalExecution) -> ProposalResult:
@@ -147,8 +181,66 @@ class CodexExecBackend(ProposerBackend):
                 "local_provider": self.local_provider,
                 "timeout_seconds": self.timeout_seconds,
                 "timed_out": timed_out,
+                "duration_seconds": execution.metadata.get("duration_seconds"),
+                "codex_home": self.codex_home,
+                "codex_version": self._get_codex_version(),
+                "model": self.model,
+                "reasoning_effort": self.reasoning_effort,
+                "sandbox_mode": self.sandbox_mode,
+                "approval_policy": self.approval_policy,
+                "ephemeral": self.ephemeral,
+                "feature_overrides": self.feature_overrides,
+                "skip_git_repo_check": self.skip_git_repo_check,
+                "isolated_home": self.isolated_home,
             },
         )
+
+    @contextmanager
+    def _execution_environment(self):
+        environment = os.environ.copy()
+        source_home = Path(
+            self.codex_home
+            or environment.get("CODEX_HOME")
+            or Path.home() / ".codex"
+        ).expanduser().resolve()
+        if not self.isolated_home:
+            if self.codex_home:
+                environment["CODEX_HOME"] = str(source_home)
+            yield environment
+            return
+
+        auth_path = source_home / "auth.json"
+        if not auth_path.is_file():
+            raise FileNotFoundError(f"Codex auth file not found: {auth_path}")
+        with tempfile.TemporaryDirectory(prefix="metaharness-codex-home-") as temp_dir:
+            isolated_home = Path(temp_dir)
+            (isolated_home / "auth.json").symlink_to(auth_path)
+            (isolated_home / "AGENTS.md").write_text(
+                "# Automation Instructions\n\n"
+                "Follow the workspace task contract. Stop immediately after its acceptance conditions pass.\n",
+                encoding="utf-8",
+            )
+            (isolated_home / "config.toml").write_text(
+                'approval_policy = "never"\n'
+                'sandbox_mode = "workspace-write"\n'
+                'model_verbosity = "low"\n'
+                "\n[features]\n"
+                "hooks = false\n"
+                "multi_agent = false\n"
+                "memories = false\n"
+                "chronicle = false\n",
+                encoding="utf-8",
+            )
+            environment["CODEX_HOME"] = str(isolated_home)
+            yield environment
+
+    def _get_codex_version(self) -> str | None:
+        if self._codex_version is not None:
+            return self._codex_version
+        probe = probe_codex_cli(self.codex_binary)
+        version = probe.get("version")
+        self._codex_version = str(version) if version else None
+        return self._codex_version
 
 
 def probe_codex_cli(codex_binary: str = "codex", timeout_seconds: int = 5) -> dict[str, Any]:

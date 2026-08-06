@@ -108,16 +108,19 @@ def build_backend_prompt(
     bootstrap_summary_text: str = "",
     trace_evidence_path: Path | None = None,
     trace_evidence_text: str = "",
+    parent_feedback_text: str = "",
 ) -> str:
     prompt = [
         f"You are optimizing a harness candidate inside {workspace_dir}.",
         f"Current candidate id: {workspace_dir.parent.name}.",
         f"Read the instructions in {instructions_path}.",
-        "Inspect .metaharness/experience/index.json and .metaharness/experience/candidates/ for prior candidate code, scores, traces, diffs, and outcomes.",
         "Use .metaharness/experience/parent/ as a shortcut for the immediate parent candidate.",
-        "Compare successful and failed prior candidates before editing the current workspace.",
-        "Inspect the current workspace, make targeted improvements, and stop when your edits are complete.",
+        "Inspect prior candidate artifacts only when they directly clarify a listed parent failure.",
+        "Make the smallest targeted changes that address the parent failures.",
         "Before finishing, write .metaharness/change_manifest.json describing each harness change and its predicted impact.",
+        "Done means the targeted edits are complete, the specified acceptance commands pass once, and the change manifest is valid.",
+        "Run each acceptance command independently and confirm its own exit status; do not combine checks in shell control flow that can mask a failure.",
+        "When those conditions are satisfied, return immediately. Do not launch collaborators, repeat passing checks, or add unrelated review work.",
         "Do not claim success without making concrete changes.",
     ]
     if bootstrap_summary_path is not None:
@@ -136,6 +139,8 @@ def build_backend_prompt(
         prompt.extend(["", "Environment bootstrap:", "", bootstrap_summary_text.strip()])
     if trace_evidence_text.strip():
         prompt.extend(["", "Trace evidence:", "", trace_evidence_text.strip()])
+    if parent_feedback_text.strip():
+        prompt.extend(["", "Parent failures:", "", parent_feedback_text.strip()])
     return "\n".join(prompt)
 
 

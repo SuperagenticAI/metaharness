@@ -92,6 +92,10 @@ class ExperimentTests(unittest.TestCase):
                     "budget": 1,
                     "improved": True,
                     "best_objective": 1.0,
+                    "best_functional_objective": 1.0,
+                    "mean_proposal_duration_seconds": 8.0,
+                    "clean_exit_count": 1,
+                    "functional_valid_candidate_count": 1,
                     "duration_seconds": 10.0,
                     "time_to_first_improvement_seconds": 3.0,
                     "keep_candidate_count": 1,
@@ -107,6 +111,10 @@ class ExperimentTests(unittest.TestCase):
                     "budget": 1,
                     "improved": False,
                     "best_objective": 0.5,
+                    "best_functional_objective": 0.8,
+                    "mean_proposal_duration_seconds": 18.0,
+                    "clean_exit_count": 0,
+                    "functional_valid_candidate_count": 1,
                     "duration_seconds": 20.0,
                     "time_to_first_improvement_seconds": None,
                     "keep_candidate_count": 0,
@@ -123,6 +131,10 @@ class ExperimentTests(unittest.TestCase):
         self.assertEqual(1, aggregate["improved_count"])
         self.assertEqual(0.5, aggregate["success_rate"])
         self.assertEqual(0.75, aggregate["mean_best_objective"])
+        self.assertEqual(0.9, aggregate["mean_best_functional_objective"])
+        self.assertEqual(13.0, aggregate["mean_proposal_duration_seconds"])
+        self.assertEqual(0.5, aggregate["clean_exit_run_rate"])
+        self.assertEqual(1.0, aggregate["functional_valid_run_rate"])
         self.assertEqual(0.5, aggregate["timeout_run_rate"])
         self.assertEqual(0.5, aggregate["scope_violation_run_rate"])
 

@@ -25,6 +25,8 @@ _SUMMARY_TSV_COLUMNS = (
     "backend_label",
     "best_candidate_id",
     "best_objective",
+    "best_functional_candidate_id",
+    "best_functional_objective",
     "baseline_objective",
     "best_candidate_outcome",
     "improved",
@@ -38,11 +40,16 @@ _SUMMARY_TSV_COLUMNS = (
     "timeout_candidate_count",
     "no_change_candidate_count",
     "scope_violation_candidate_count",
+    "clean_exit_count",
+    "functional_valid_candidate_count",
+    "mean_proposal_duration_seconds",
     "duration_seconds",
     "first_improving_candidate_id",
     "best_test_objective",
     "proposal_timeout_seconds",
     "model",
+    "reasoning_effort",
+    "codex_version",
     "use_oss",
     "local_provider",
 )
@@ -53,8 +60,14 @@ _LEDGER_TSV_COLUMNS = (
     "parent_candidate_ids",
     "is_best",
     "objective",
+    "functional_objective",
+    "functional_valid",
     "valid",
     "proposal_applied",
+    "clean_exit",
+    "timed_out",
+    "proposal_returncode",
+    "proposal_duration_seconds",
     "outcome",
     "outcome_summary",
     "changed_file_count",
@@ -112,6 +125,26 @@ def summarize_run(run_dir: str | Path) -> dict[str, Any]:
     filtered_changed_files = _filter_changed_files(raw_best_changed_files)
     best_changed_files = filtered_changed_files[:_MAX_REPORTED_CHANGED_FILES]
     outcome_counts = _count_candidate_outcomes(candidates)
+    functional_candidates = [
+        candidate
+        for candidate in candidates
+        if _as_float(candidate.get("functional_objective")) is not None
+    ]
+    best_functional = max(
+        functional_candidates,
+        key=lambda item: (
+            _as_float(item.get("functional_objective"))
+            if _as_float(item.get("functional_objective")) is not None
+            else float("-inf")
+        ),
+        default=None,
+    )
+    proposal_durations = [
+        duration
+        for candidate in candidates
+        if candidate.get("candidate_id") != "c0000"
+        if (duration := _as_float(candidate.get("proposal_duration_seconds"))) is not None
+    ]
 
     return {
         "run_dir": str(run_dir),
@@ -121,12 +154,16 @@ def summarize_run(run_dir: str | Path) -> dict[str, Any]:
         "proposer": run_config.get("proposer"),
         "backend_label": backend["backend_label"],
         "model": backend["model"],
+        "reasoning_effort": backend["reasoning_effort"],
+        "codex_version": backend["codex_version"],
         "use_oss": backend["use_oss"],
         "local_provider": backend["local_provider"],
         "proposal_timeout_seconds": backend["proposal_timeout_seconds"],
         "baseline_objective": baseline_objective,
         "best_candidate_id": leaderboard.get("best_candidate_id"),
         "best_objective": best_objective,
+        "best_functional_candidate_id": best_functional.get("candidate_id") if best_functional else None,
+        "best_functional_objective": _as_float(best_functional.get("functional_objective")) if best_functional else None,
         "best_candidate_outcome": _candidate_outcome(best),
         "improved": leaderboard.get("best_candidate_id") != "c0000",
         "search_mode": str(run_config.get("search_mode", "hill-climb")),
@@ -136,6 +173,17 @@ def summarize_run(run_dir: str | Path) -> dict[str, Any]:
         "time_to_first_improvement_seconds": _time_to_candidate(started_at, first_improving_candidate_data),
         "candidate_count": len(candidates),
         "proposal_applied_count": sum(1 for item in candidates if item.get("proposal_applied")),
+        "clean_exit_count": sum(
+            1 for item in candidates if item.get("candidate_id") != "c0000" and item.get("clean_exit")
+        ),
+        "functional_valid_candidate_count": sum(
+            1
+            for item in candidates
+            if item.get("candidate_id") != "c0000" and item.get("functional_valid")
+        ),
+        "mean_proposal_duration_seconds": (
+            sum(proposal_durations) / len(proposal_durations) if proposal_durations else None
+        ),
         "valid_candidate_count": sum(1 for item in candidates if item.get("valid")),
         "candidate_outcome_counts": outcome_counts,
         "keep_candidate_count": outcome_counts.get("keep", 0),
@@ -202,10 +250,16 @@ def candidate_ledger(run_dir: str | Path) -> list[dict[str, Any]]:
                 "parent_candidate_ids": [str(value) for value in candidate.get("parent_candidate_ids", [])],
                 "is_best": candidate_id == best_candidate_id,
                 "objective": _as_float(candidate.get("objective")),
+                "functional_objective": _as_float(candidate.get("functional_objective")),
+                "functional_valid": candidate.get("functional_valid"),
                 "search_objective": _as_float(candidate.get("search_objective", candidate.get("objective"))),
                 "test_objective": _as_float(candidate.get("test_objective")),
                 "valid": bool(candidate.get("valid")),
                 "proposal_applied": bool(candidate.get("proposal_applied")),
+                "clean_exit": candidate.get("clean_exit"),
+                "timed_out": bool(candidate.get("timed_out")),
+                "proposal_returncode": candidate.get("proposal_returncode"),
+                "proposal_duration_seconds": _as_float(candidate.get("proposal_duration_seconds")),
                 "outcome": _candidate_outcome(candidate),
                 "outcome_summary": str(candidate.get("outcome_summary") or ""),
                 "changed_file_count": len(filtered_changed_files),
@@ -250,6 +304,9 @@ def render_run_summary(summary: dict[str, Any]) -> str:
         lines.append(f"duration_seconds={summary['duration_seconds']:.3f}")
     if summary.get("best_test_objective") is not None:
         lines.append(f"best_test_objective={summary['best_test_objective']:.3f}")
+    if summary.get("best_functional_objective") is not None:
+        lines.append(f"best_functional_candidate_id={summary['best_functional_candidate_id']}")
+        lines.append(f"best_functional_objective={summary['best_functional_objective']:.3f}")
     if summary.get("best_changed_files"):
         lines.append(f"best_changed_files={','.join(summary['best_changed_files'])}")
     if summary.get("best_changed_files_truncated_count"):
@@ -371,11 +428,11 @@ def ledger_tsv_columns() -> tuple[str, ...]:
 def _extract_backend_summary(run_config: dict[str, Any], proposal: dict[str, Any] | None) -> dict[str, Any]:
     proposer = str(run_config.get("proposer", "unknown"))
     metadata = proposal.get("metadata", {}) if isinstance(proposal, dict) else {}
-    model = None
+    model = metadata.get("model") if isinstance(metadata, dict) else None
     if isinstance(metadata, dict):
         command = metadata.get("command", [])
         if isinstance(command, list):
-            model = _extract_command_flag(command, "-m") or _extract_command_flag(command, "--model")
+            model = model or _extract_command_flag(command, "-m") or _extract_command_flag(command, "--model")
 
     use_oss = bool(metadata.get("use_oss")) if isinstance(metadata, dict) else False
     local_provider = metadata.get("local_provider") if isinstance(metadata, dict) else None
@@ -390,6 +447,8 @@ def _extract_backend_summary(run_config: dict[str, Any], proposal: dict[str, Any
     return {
         "backend_label": backend_label,
         "model": model,
+        "reasoning_effort": metadata.get("reasoning_effort") if isinstance(metadata, dict) else None,
+        "codex_version": metadata.get("codex_version") if isinstance(metadata, dict) else None,
         "use_oss": use_oss,
         "local_provider": local_provider,
         "proposal_timeout_seconds": timeout_seconds,

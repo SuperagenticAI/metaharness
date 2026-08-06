@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import shutil
+import subprocess
 from difflib import unified_diff
 from datetime import UTC, datetime
 from pathlib import Path
@@ -67,7 +68,8 @@ class FilesystemRunStore:
         if candidate_dir.exists():
             shutil.rmtree(candidate_dir)
         candidate_dir.mkdir(parents=True, exist_ok=True)
-        shutil.copytree(source_workspace, workspace_dir)
+        shutil.copytree(source_workspace, workspace_dir, ignore=shutil.ignore_patterns(".git"))
+        self._initialize_candidate_repository(workspace_dir)
         return CandidateRecord(
             candidate_id=candidate_id,
             parent_candidate_ids=parent_candidate_ids,
@@ -141,6 +143,7 @@ class FilesystemRunStore:
                 bootstrap_summary_text=bootstrap.summary_text,
                 trace_evidence_path=candidate_trace_evidence_path,
                 trace_evidence_text=trace_evidence_text,
+                parent_feedback_text=self._parent_feedback_text(parent),
             ),
             encoding="utf-8",
         )
@@ -357,9 +360,16 @@ class FilesystemRunStore:
                 "test_objective": candidate.test_objective,
                 "search_metrics": candidate.search_metrics,
                 "test_metrics": candidate.test_metrics,
+                "functional_objective": candidate.functional_objective,
+                "functional_metrics": candidate.functional_metrics,
+                "functional_valid": candidate.functional_valid,
                 "valid": candidate.valid,
                 "test_valid": candidate.test_valid,
                 "proposal_applied": candidate.proposal_applied,
+                "clean_exit": candidate.clean_exit,
+                "timed_out": candidate.timed_out,
+                "proposal_returncode": candidate.proposal_returncode,
+                "proposal_duration_seconds": candidate.proposal_duration_seconds,
                 "outcome": candidate.outcome,
                 "outcome_summary": candidate.outcome_summary,
                 "scope_violation_paths": candidate.scope_violation_paths,
@@ -398,6 +408,39 @@ class FilesystemRunStore:
             },
         )
 
+    def materialize_timeout_snapshot(self, candidate: CandidateRecord) -> Path:
+        snapshot_dir = candidate.candidate_dir / "timeout_snapshot" / "workspace"
+        if snapshot_dir.exists():
+            shutil.rmtree(snapshot_dir)
+        shutil.copytree(
+            candidate.workspace_dir,
+            snapshot_dir,
+            ignore=shutil.ignore_patterns(
+                ".git",
+                ".metaharness",
+                ".venv",
+                "__pycache__",
+                ".pytest_cache",
+                ".mypy_cache",
+                ".ruff_cache",
+                "*.pyc",
+                "*.pyo",
+            ),
+        )
+        return snapshot_dir
+
+    def write_shadow_validation_result(self, candidate_id: str, result: Any) -> None:
+        self._write_json(
+            self.candidates_dir / candidate_id / "shadow_validation" / "result.json",
+            result.to_dict(),
+        )
+
+    def write_shadow_evaluation_result(self, candidate_id: str, result: Any) -> None:
+        self._write_json(
+            self.candidates_dir / candidate_id / "shadow_evaluation" / "search_result.json",
+            result.to_dict(),
+        )
+
     def capture_workspace_diff(self, parent: CandidateRecord, candidate: CandidateRecord) -> dict[str, Any]:
         proposal_dir = candidate.candidate_dir / "proposal"
         proposal_dir.mkdir(parents=True, exist_ok=True)
@@ -433,6 +476,26 @@ class FilesystemRunStore:
     def _write_json(self, path: Path, data: Any) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(data, indent=2, sort_keys=True), encoding="utf-8")
+
+    @staticmethod
+    def _parent_feedback_text(parent: CandidateRecord) -> str:
+        result_path = parent.candidate_dir / "evaluation" / "search_result.json"
+        if not result_path.exists():
+            return ""
+        try:
+            result = json.loads(result_path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            return ""
+        metadata = result.get("metadata", {}) if isinstance(result, dict) else {}
+        details = metadata.get("details", []) if isinstance(metadata, dict) else []
+        failures = []
+        for detail in details:
+            if not isinstance(detail, dict) or detail.get("status") == "passed":
+                continue
+            task_id = str(detail.get("id", "unknown"))
+            message = str(detail.get("message", "failed"))
+            failures.append(f"- {task_id}: {message}")
+        return "\n".join(failures)
 
     @staticmethod
     def _read_json(path: Path) -> dict[str, Any]:
@@ -675,10 +738,64 @@ class FilesystemRunStore:
             if not path.is_file():
                 continue
             relative = path.relative_to(workspace_dir)
-            if relative.parts and relative.parts[0] == ".metaharness":
+            if relative.parts and relative.parts[0] in {".git", ".metaharness"}:
+                continue
+            if FilesystemRunStore.is_transient_path(relative.as_posix()):
                 continue
             files[relative.as_posix()] = path.read_bytes()
         return files
+
+    @staticmethod
+    def is_transient_path(relative_path: str) -> bool:
+        parts = Path(relative_path).parts
+        if any(part in {".venv", "__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache"} for part in parts):
+            return True
+        return Path(relative_path).suffix in {".pyc", ".pyo"}
+
+    @staticmethod
+    def _initialize_candidate_repository(workspace_dir: Path) -> None:
+        subprocess.run(
+            [
+                "git",
+                "-c",
+                "core.hooksPath=/dev/null",
+                "init",
+                "--quiet",
+                "--initial-branch=metaharness-candidate",
+            ],
+            cwd=workspace_dir,
+            check=True,
+            text=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "config", "core.hooksPath", str(workspace_dir / ".git" / "hooks")],
+            cwd=workspace_dir,
+            check=True,
+            text=True,
+            capture_output=True,
+        )
+        exclude_path = workspace_dir / ".git" / "info" / "exclude"
+        exclude_path.write_text(".metaharness/\n.venv/\n__pycache__/\n*.py[co]\n", encoding="utf-8")
+        subprocess.run(["git", "add", "-A"], cwd=workspace_dir, check=True, text=True, capture_output=True)
+        subprocess.run(
+            [
+                "git",
+                "-c",
+                "user.name=MetaHarness",
+                "-c",
+                "user.email=metaharness@localhost",
+                "commit",
+                "--quiet",
+                "--allow-empty",
+                "-m",
+                "Materialize candidate baseline",
+            ],
+            cwd=workspace_dir,
+            check=True,
+            text=True,
+            capture_output=True,
+        )
 
     @staticmethod
     def _render_file_diff(relative_path: str, before: bytes | None, after: bytes | None) -> str:

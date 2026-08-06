@@ -27,6 +27,16 @@
       "use_oss": true,
       "local_provider": "ollama",
       "model": "gpt-oss:20b",
+      "reasoning_effort": "medium",
+      "ephemeral": true,
+      "isolated_home": true,
+      "feature_overrides": {
+        "hooks": false,
+        "multi_agent": false,
+        "memories": false,
+        "chronicle": false
+      },
+      "skip_git_repo_check": false,
       "proposal_timeout_seconds": 240
     }
   },

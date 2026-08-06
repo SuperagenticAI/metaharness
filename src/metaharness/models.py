@@ -119,9 +119,16 @@ class CandidateRecord:
     test_objective: float | None = None
     search_metrics: dict[str, float] = field(default_factory=dict)
     test_metrics: dict[str, float] = field(default_factory=dict)
+    functional_objective: float | None = None
+    functional_metrics: dict[str, float] = field(default_factory=dict)
+    functional_valid: bool | None = None
     valid: bool = False
     test_valid: bool | None = None
     proposal_applied: bool = False
+    clean_exit: bool | None = None
+    timed_out: bool = False
+    proposal_returncode: int | None = None
+    proposal_duration_seconds: float | None = None
     outcome: str = "unknown"
     outcome_summary: str = ""
     scope_violation_paths: list[str] = field(default_factory=list)

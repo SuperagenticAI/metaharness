@@ -212,6 +212,15 @@ def make_backend(
             use_oss=use_oss,
             local_provider=local_provider,
             timeout_seconds=_optional_float(options.get("proposal_timeout_seconds")),
+            codex_home=_resolve_codex_home(options.get("codex_home"), project.root_dir),
+            reasoning_effort=_optional_string(options.get("reasoning_effort")),
+            ephemeral=bool(options.get("ephemeral", False)),
+            feature_overrides={
+                str(key): bool(value)
+                for key, value in (options.get("feature_overrides", {}) or {}).items()
+            },
+            skip_git_repo_check=bool(options.get("skip_git_repo_check", True)),
+            isolated_home=bool(options.get("isolated_home", False)),
         )
     if name == "gemini":
         return GeminiCliBackend(
@@ -284,6 +293,16 @@ def run_coding_tool_project(
         proposal_batch_size=proposal_batch_size if proposal_batch_size is not None else project.proposal_batch_size,
         selection_policy=selection_policy or project.selection_policy,
     )
+
+
+def _resolve_codex_home(value: Any, project_root: Path) -> str | None:
+    text = _optional_string(value)
+    if text is None:
+        return None
+    path = Path(os.path.expandvars(os.path.expanduser(text)))
+    if not path.is_absolute():
+        path = project_root / path
+    return str(path.resolve())
 
 
 def _coding_tool_scaffold_fake_backend() -> FakeBackend:

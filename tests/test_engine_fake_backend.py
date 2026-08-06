@@ -1,6 +1,7 @@
+import json
+import subprocess
 import tempfile
 import unittest
-import json
 from pathlib import Path
 
 from metaharness import EvaluationResult, FakeBackend, ValidationResult, optimize_harness
@@ -142,6 +143,25 @@ class EngineTests(unittest.TestCase):
             self.assertEqual(1, row["change_manifest_change_count"])
             self.assertEqual({"EFFECTIVE": 1}, row["change_attribution_verdict_counts"])
             self.assertEqual("this is better\n", (result.best_workspace_dir / "message.txt").read_text(encoding="utf-8"))
+            repository_root = subprocess.run(
+                ["git", "rev-parse", "--show-toplevel"],
+                cwd=result.best_workspace_dir,
+                check=True,
+                text=True,
+                capture_output=True,
+            ).stdout.strip()
+            self.assertEqual(str(result.best_workspace_dir), repository_root)
+            hooks_path = subprocess.run(
+                ["git", "config", "--get", "core.hooksPath"],
+                cwd=result.best_workspace_dir,
+                check=True,
+                text=True,
+                capture_output=True,
+            ).stdout.strip()
+            self.assertEqual(str(result.best_workspace_dir / ".git" / "hooks"), hooks_path)
+            bootstrap_data = json.loads(bootstrap_snapshot.read_text(encoding="utf-8"))
+            self.assertEqual(str(result.best_workspace_dir), bootstrap_data["git"]["repo_root"])
+            self.assertEqual([], bootstrap_data["git"]["status_lines"])
 
 
 if __name__ == "__main__":
