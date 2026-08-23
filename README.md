@@ -458,4 +458,16 @@ uv run python examples/ticket_router/run.py --backend fake --budget 1
 
 ## License
 
-Apache 2.0. See [LICENSE](LICENSE).
+[Functional Source License, Version 1.1, ALv2 Future License](LICENSE) (`FSL-1.1-ALv2`).
+
+You may read, use, modify and redistribute this software for any purpose other
+than a Competing Use, which means offering it (or substantially similar
+functionality) to others as a commercial product or service. Internal use,
+non-commercial education, non-commercial research, and professional services
+delivered to a licensee are all permitted.
+
+Each version becomes available under the [Apache License, Version
+2.0](LICENSE-APACHE-2.0) on the second anniversary of its release.
+
+Releases up to and including `0.4.0` were published under Apache 2.0 and remain
+available under those terms.

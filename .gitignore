@@ -12,6 +12,7 @@ site/
 examples/ticket_router/runs/
 examples/python_fixture_benchmark/runs/
 examples/python_cli_benchmark/runs/
+examples/omnigent_agent_benchmark/runs/
 rubbish_dont_use/
 LOCAL_CLI_SOURCE_ANALYSIS.md
 META_HARNESS_RESEARCH_PLAN.md
