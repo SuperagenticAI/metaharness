@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.0] - 2026-08-23
+
+### Changed
+- Relicensed from Apache-2.0 to the Functional Source License, Version 1.1,
+  ALv2 Future License (`FSL-1.1-ALv2`). The source stays public to read, use,
+  modify and redistribute for any Permitted Purpose; only a Competing Use is
+  excluded. Each release converts to Apache-2.0 on the second anniversary of
+  its publication.
+- Releases up to and including `0.4.0` were published under Apache-2.0 and
+  remain available under those terms.
+- The previous Apache-2.0 text is preserved at `LICENSE-APACHE-2.0`, which is
+  also the Future License this project converts to.
+
+### Fixed
+- `examples/omnigent_agent_benchmark/runs/` is now ignored, matching the other
+  example benchmark directories.
+
 ## [0.4.0] - 2026-06-13
 
 ### Added
