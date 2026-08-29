@@ -23,7 +23,7 @@ This repository (`SuperagenticAI/metaharness`):
 - Emphasizes repeatable runs, artifact storage, and operational tooling.
 - Focuses on coding-tool style domains with deterministic checks and inspectable ledgers.
 - Codex is the validated proposer. Gemini CLI and Omnigent are experimental. Pi and OpenCode were removed in 0.2.0.
-- There is not yet a first-class Claude Code proposer or a Harbor / Terminal-Bench evaluator adapter.
+- There is not yet a first-class Claude Code proposer or a Harbor / Terminal-Bench evaluator adapter. Hosts can embed `optimize_harness` (see [Embed](embed.md)); AgentSky and HarnessRouter are not in-tree proposers.
 
 ## Feature-Level Differences
 

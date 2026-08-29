@@ -18,6 +18,7 @@ This repository is a production-oriented library with:
 - Codex-first proposer integration
 - filesystem-first run store and reporting
 - deterministic coding-tool benchmark workflows
+- a library kernel (`optimize_harness`) that hosts such as Omnigent, HarnessRouter (UHP), and AgentSky-style runtimes can embed
 
 The right strategy is to merge strengths, not replace one with the other.
 

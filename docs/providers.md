@@ -84,6 +84,11 @@ uv run metaharness run \
 Omnigent is available as an experimental proposer backend for running a
 candidate proposal through `omni run`.
 
+Smart-routing YAML/JSON (`routes:select` style tables) is also an optimization
+*target*, not only a proposer. See `examples/omnigent_routing_benchmark`. This
+repository does not wrap AgentSky or HarnessRouter as proposer backends; those
+hosts should embed `optimize_harness` instead ([Embed](embed.md)).
+
 Configure it in `metaharness.json`:
 
 ```json

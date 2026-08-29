@@ -1,0 +1,9 @@
+[
+  {
+    "id": "heldout-secret-route",
+    "type": "command",
+    "weight": 1.0,
+    "command": "python3 route.py --prompt \"Please refactor login helpers and add tests around token refresh\" | grep -qx claude-sdk",
+    "expect_exit_code": 0
+  }
+]

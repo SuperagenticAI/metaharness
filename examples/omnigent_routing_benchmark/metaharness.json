@@ -1,0 +1,23 @@
+{
+  "objective": "Improve harness+model routing for mixed task difficulty so cheap, mid, and hard prompts land on the right coding harness.",
+  "constraints": [
+    "Keep route.py stable; edit the JSON routing table only.",
+    "Do not copy evaluation task IDs into routing.json.",
+    "First matching rule wins; keep the table file-backed JSON, not YAML."
+  ],
+  "baseline_dir": "baseline",
+  "runs_dir": "runs",
+  "tasks_file": "tasks.json",
+  "test_tasks_file": "test_tasks.json",
+  "required_files": [
+    "routing.json",
+    "route.py"
+  ],
+  "allowed_write_paths": [
+    {"path": "routing.json", "class": "middleware"}
+  ],
+  "write_scope_mode": "single-class",
+  "leakage_gate": true,
+  "example_profile": "coding-tool-omnigent-routing",
+  "default_budget": 1
+}
