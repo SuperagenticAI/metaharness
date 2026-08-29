@@ -34,9 +34,9 @@ The right strategy is to merge strengths, not replace one with the other.
 
 - No first-class Claude Code proposer, which is what the paper and official examples actually run.
 - No Harbor / Terminal-Bench evaluator adapter, so this repo cannot reproduce the paper headline number or later AHE / HarnessCompass results.
-- Leakage and generalization-gate checks are not part of `inspect` yet (task IDs, test names, keyword dispatch).
+- Leakage and generalization-gate checks now reject leaking diffs during search (`leakage-violation`); `inspect` surfaces the matched tokens. Keyword-dispatch heuristics beyond explicit tokens are still thin.
 - Test-time-scaling baselines (Best-of-N / sequential refine under a matched budget) are not a `compare` mode yet. See [Wang et al. 2026](https://arxiv.org/abs/2607.12227).
-- Component-wise tracks (tools and middleware vs prompt, skills, and memory) are not first-class. The workspace is still one blob.
+- Write-scope classes (`prompt`, `skill`, `middleware`, ...) can constrain a candidate to one class via `write_scope_mode: "single-class"`. AHE-style per-component tracks and rollback are still not first-class.
 - Provider telemetry can still be richer for research-grade analysis.
 
 ## Alignment Principles
@@ -74,15 +74,29 @@ The right strategy is to merge strengths, not replace one with the other.
 - Richer experiment summary outputs for multi-objective comparisons
 - Token/tool/cost fields and expanded trial/summary columns in outputs
 
+### Leakage Gate
+- `leakage_gate` plus optional `leakage_forbidden` tokens in `metaharness.json`
+- Task IDs from search and held-out test tasks are forbidden in changed files
+- Rejected candidates get outcome `leakage-violation`; `inspect` and reporting count them
+
+### Write-Scope Classes
+- `allowed_write_paths` may be `{path, class}` objects as well as plain path strings
+- `write_scope_mode: "single-class"` rejects a candidate that touches more than one class
+- Classes: `prompt`, `tool_desc`, `tool_impl`, `middleware`, `skill`, `subagent`, `memory`, `other`
+
+### Skills Scaffold
+- `metaharness scaffold coding-tool ./proj --profile skills`
+- Seeds `.agents/skills/<name>/SKILL.md` plus Claude/Gemini skill directories and `@AGENTS.md`
+
 ## Near-Term Roadmap
 
 Shipped items above stay shipped. The remaining alignment work is:
 
 1. Claude Code proposer backend, paper-faithful, next to Codex.
 2. Harbor evaluator adapter so `evaluate_search` / `evaluate_test` can call `harbor run` on Terminal-Bench 2 (and later SWE-bench).
-3. Leakage / generalization-gate audit in `inspect` and `summarize` (reject or flag diffs that mention task IDs, test function names, or private keyword dispatch). Inspired by [HarnessCompass](https://arxiv.org/abs/2608.01918).
+3. Richer keyword-dispatch / test-name leakage heuristics on top of the shipped token gate. Inspired by [HarnessCompass](https://arxiv.org/abs/2608.01918).
 4. Matched-budget sampling baseline in `compare`, so harness-evolution gains are not confused with extra search. Inspired by [Wang et al.](https://arxiv.org/abs/2607.12227).
-5. Optional component tracks via `allowed_write_paths` / `domain_spec.md`, so a candidate can be constrained to tools-and-middleware or to prompt-and-skills.
+5. Deeper AHE-style component tracks and rollback, beyond single-class write-scope constraints.
 
 ## Risks And Mitigations
 

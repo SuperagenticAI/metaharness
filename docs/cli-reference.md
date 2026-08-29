@@ -37,6 +37,7 @@ Profiles:
 - `standard`
 - `local-oss-smoke`
 - `local-oss-medium`
+- `skills`
 
 <div class="command-grid" markdown="1">
 <div class="command-card" markdown="1">
@@ -70,6 +71,18 @@ uv run metaharness scaffold \
   coding-tool \
   ./my-local-oss-medium \
   --profile local-oss-medium
+```
+</div>
+<div class="command-card" markdown="1">
+### Agent Skills
+
+Seeds a shared skill under `.agents/skills` plus Claude/Gemini skill directories, with `leakage_gate` and `write_scope_mode: "single-class"`.
+
+```bash
+uv run metaharness scaffold \
+  coding-tool \
+  ./my-skills-optimizer \
+  --profile skills
 ```
 </div>
 </div>

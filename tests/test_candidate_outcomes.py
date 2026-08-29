@@ -168,5 +168,78 @@ class CandidateOutcomeTests(unittest.TestCase):
             self.assertEqual(1, summary["scope_violation_candidate_count"])
 
 
+
+    def test_leakage_violation_candidate_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            baseline = root / "demo_project" / "baseline"
+            baseline.mkdir(parents=True)
+            (baseline / "message.txt").write_text("baseline\n", encoding="utf-8")
+            run_dir = root / "demo_project" / "runs" / "demo"
+
+            optimize_harness(
+                baseline=baseline,
+                proposer=FakeBackend(
+                    mutation=lambda request: {
+                        "relative_path": "message.txt",
+                        "content": "this is better for search-secret-task\n",
+                    }
+                ),
+                validator=OutcomeValidator(),
+                evaluator=OutcomeEvaluator(),
+                run_dir=run_dir,
+                budget=1,
+                objective="Exercise leakage-violation outcome.",
+                allowed_write_paths=["message.txt"],
+                leakage_gate=True,
+                leakage_tokens=["search-secret-task"],
+            )
+
+            manifest = json.loads((run_dir / "candidates" / "c0001" / "manifest.json").read_text(encoding="utf-8"))
+            summary = summarize_run(run_dir)
+            self.assertEqual("leakage-violation", manifest["outcome"])
+            self.assertEqual(["search-secret-task"], manifest["leakage_violation_tokens"])
+            self.assertEqual(1, summary["leakage_violation_candidate_count"])
+
+    def test_class_violation_candidate_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            baseline = root / "demo_project" / "baseline"
+            baseline.mkdir(parents=True)
+            (baseline / "AGENTS.md").write_text("# prompt\n", encoding="utf-8")
+            skill_dir = baseline / ".agents" / "skills" / "repo-hygiene"
+            skill_dir.mkdir(parents=True)
+            (skill_dir / "SKILL.md").write_text("# skill\n", encoding="utf-8")
+            (baseline / "message.txt").write_text("baseline\n", encoding="utf-8")
+            run_dir = root / "demo_project" / "runs" / "demo"
+
+            optimize_harness(
+                baseline=baseline,
+                proposer=FakeBackend(
+                    mutation=lambda request: {
+                        "files": [
+                            {"relative_path": "AGENTS.md", "content": "# prompt improved\n"},
+                            {
+                                "relative_path": ".agents/skills/repo-hygiene/SKILL.md",
+                                "content": "# skill improved\n",
+                            },
+                        ]
+                    }
+                ),
+                validator=OutcomeValidator(),
+                evaluator=OutcomeEvaluator(),
+                run_dir=run_dir,
+                budget=1,
+                objective="Exercise class-violation outcome.",
+                allowed_write_paths=["AGENTS.md", ".agents/skills"],
+                write_scope_mode="single-class",
+            )
+
+            manifest = json.loads((run_dir / "candidates" / "c0001" / "manifest.json").read_text(encoding="utf-8"))
+            summary = summarize_run(run_dir)
+            self.assertEqual("class-violation", manifest["outcome"])
+            self.assertEqual(["prompt", "skill"], manifest["class_violation_classes"])
+            self.assertEqual(1, summary["class_violation_candidate_count"])
+
 if __name__ == "__main__":
     unittest.main()

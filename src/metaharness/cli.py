@@ -39,7 +39,7 @@ def main(argv: list[str] | None = None) -> int:
     scaffold_parser.add_argument("target_dir")
     scaffold_parser.add_argument(
         "--profile",
-        choices=["standard", "local-oss-smoke", "local-oss-medium"],
+        choices=["standard", "local-oss-smoke", "local-oss-medium", "skills"],
         default="standard",
     )
 
@@ -423,6 +423,10 @@ def _cmd_inspect(run_dir: Path, json_output: bool) -> int:
         )
         if candidate.get("scope_violation_paths"):
             print(f"    scope_violation_paths={','.join(candidate['scope_violation_paths'])}")
+        if candidate.get("class_violation_classes"):
+            print(f"    class_violation_classes={','.join(candidate['class_violation_classes'])}")
+        if candidate.get("leakage_violation_tokens"):
+            print(f"    leakage_violation_tokens={','.join(candidate['leakage_violation_tokens'])}")
     return 0
 
 

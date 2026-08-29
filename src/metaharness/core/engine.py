@@ -13,6 +13,14 @@ from ..models import (
 )
 from ..proposer.base import ProposerBackend
 from ..store.filesystem import FilesystemRunStore
+from .leakage import find_leakage_tokens
+from .scope import (
+    WriteScopeEntry,
+    class_violations,
+    infer_write_class,
+    normalize_write_scope_mode,
+    parse_allowed_write_paths,
+)
 
 
 class MetaHarnessEngine:
@@ -26,6 +34,10 @@ class MetaHarnessEngine:
         objective: str,
         constraints: Sequence[str] | None = None,
         allowed_write_paths: Sequence[str] | None = None,
+        write_scope_mode: str = "all",
+        write_scope_entries: Sequence[WriteScopeEntry] | None = None,
+        leakage_gate: bool = False,
+        leakage_tokens: Sequence[str] | None = None,
         trace_evidence_path: Path | None = None,
         search_mode: str = "hill-climb",
         proposal_batch_size: int = 1,
@@ -39,6 +51,10 @@ class MetaHarnessEngine:
         self.objective = objective
         self.constraints = list(constraints or [])
         self.allowed_write_paths = [self._normalize_allowed_path(value) for value in (allowed_write_paths or []) if str(value).strip()]
+        self.write_scope_mode = normalize_write_scope_mode(write_scope_mode)
+        self.write_scope_entries = self._normalize_write_scope_entries(write_scope_entries)
+        self.leakage_gate = bool(leakage_gate)
+        self.leakage_tokens = [str(token).strip() for token in (leakage_tokens or []) if str(token).strip()]
         self.trace_evidence_path = trace_evidence_path.resolve() if trace_evidence_path is not None else None
         self.search_mode = search_mode
         self.proposal_batch_size = max(1, int(proposal_batch_size))
@@ -85,6 +101,12 @@ class MetaHarnessEngine:
                 "proposer": self.proposer.name,
                 "baseline": str(self.baseline),
                 "allowed_write_paths": self.allowed_write_paths,
+                "write_scope_mode": self.write_scope_mode,
+                "write_scope_entries": [
+                    {"path": entry.path, "class": entry.write_class} for entry in self.write_scope_entries
+                ],
+                "leakage_gate": self.leakage_gate,
+                "leakage_tokens": self.leakage_tokens,
                 "trace_evidence_path": str(self.trace_evidence_path) if self.trace_evidence_path else None,
                 "search_mode": self.search_mode,
                 "proposal_batch_size": self.proposal_batch_size,
@@ -135,7 +157,14 @@ class MetaHarnessEngine:
             for candidate in batch:
                 if candidate.candidate_id == best.candidate_id:
                     continue
-                if candidate.outcome in {"crash", "timeout", "scope-violation", "no-change"}:
+                if candidate.outcome in {
+                    "crash",
+                    "timeout",
+                    "scope-violation",
+                    "class-violation",
+                    "leakage-violation",
+                    "no-change",
+                }:
                     continue
                 if candidate.valid:
                     candidate.outcome = "discard"
@@ -216,6 +245,40 @@ class MetaHarnessEngine:
                 + ", ".join(violation_paths)
             )
             return
+
+        if class_names := class_violations(
+            proposal_result.changed_files,
+            self.write_scope_entries,
+            self.write_scope_mode,
+        ):
+            candidate.valid = False
+            candidate.search_objective = float("-inf")
+            candidate.objective = float("-inf")
+            candidate.outcome = "class-violation"
+            candidate.class_violation_classes = class_names
+            candidate.outcome_summary = (
+                "Changed files span more than one write-scope class: "
+                + ", ".join(class_names)
+            )
+            return
+
+        if self.leakage_gate:
+            leaked = find_leakage_tokens(
+                candidate.workspace_dir,
+                proposal_result.changed_files,
+                self.leakage_tokens,
+            )
+            if leaked:
+                candidate.valid = False
+                candidate.search_objective = float("-inf")
+                candidate.objective = float("-inf")
+                candidate.outcome = "leakage-violation"
+                candidate.leakage_violation_tokens = leaked
+                candidate.outcome_summary = (
+                    "Changed files contain forbidden evaluation tokens: "
+                    + ", ".join(leaked)
+                )
+                return
 
         if workspace_change_count == 0:
             candidate.valid = parent.valid
@@ -373,6 +436,15 @@ class MetaHarnessEngine:
                 "Only modify files within the allowed write scope: "
                 + ", ".join(self.allowed_write_paths)
             )
+        if self.write_scope_mode == "single-class":
+            constraints.append(
+                "A candidate must modify files in only one write-scope class "
+                "(prompt, skill, middleware, memory, tool_impl, tool_desc, subagent, or other)."
+            )
+        if self.leakage_gate:
+            constraints.append(
+                "Do not copy task IDs, test names, or other evaluation identifiers into harness files."
+            )
         return constraints
 
     def _write_scope_forbidden_actions(self) -> list[str]:
@@ -382,6 +454,28 @@ class MetaHarnessEngine:
             "Do not edit files outside the allowed write scope: "
             + ", ".join(self.allowed_write_paths)
         ]
+
+    def _normalize_write_scope_entries(
+        self,
+        entries: Sequence[WriteScopeEntry] | None,
+    ) -> list[WriteScopeEntry]:
+        normalized: list[WriteScopeEntry] = []
+        if entries:
+            for entry in entries:
+                if isinstance(entry, WriteScopeEntry):
+                    path = self._normalize_allowed_path(entry.path)
+                    normalized.append(WriteScopeEntry(path=path, write_class=entry.write_class))
+                    continue
+                if isinstance(entry, dict):
+                    _, parsed = parse_allowed_write_paths([entry])
+                    normalized.extend(parsed)
+                    continue
+                path = self._normalize_allowed_path(str(entry))
+                normalized.append(WriteScopeEntry(path=path, write_class=infer_write_class(path)))
+        elif self.allowed_write_paths:
+            for path in self.allowed_write_paths:
+                normalized.append(WriteScopeEntry(path=path, write_class=infer_write_class(path)))
+        return normalized
 
     def _scope_violations(self, changed_files: Sequence[str]) -> list[str]:
         if not self.allowed_write_paths:

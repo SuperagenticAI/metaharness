@@ -115,7 +115,8 @@ uv run metaharness experiment \
 - a deterministic `FakeBackend`
 - extension backends via `backend_plugins` (`module:callable` factories)
 - a coding-tool integration for instruction files and script-based harnesses
-- explicit per-candidate outcomes: `keep`, `discard`, `crash`, `timeout`, `no-change`, and `scope-violation`
+- explicit per-candidate outcomes: `keep`, `discard`, `crash`, `timeout`, `no-change`, `scope-violation`, `class-violation`, and `leakage-violation`
+- optional leakage gate and single-class write-scope constraints for Agent Skills and prompt files
 - reporting commands for `inspect`, `ledger`, `summarize`, and `compare`
 - trace evidence injection with `--trace-evidence` for HALO/RLM analysis reports
 - AHE-style change manifests and attribution reports for evidence-backed candidate edits
@@ -324,6 +325,7 @@ Available profiles:
 - `standard`
 - `local-oss-smoke`
 - `local-oss-medium`
+- `skills`
 
 Run the scaffold with the fake backend:
 

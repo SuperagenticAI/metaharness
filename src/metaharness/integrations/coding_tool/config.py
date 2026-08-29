@@ -5,6 +5,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from ...core.scope import WriteScopeEntry, normalize_write_scope_mode, parse_allowed_write_paths
+
 
 @dataclass(slots=True)
 class BackendPluginConfig:
@@ -35,6 +37,10 @@ class CodingToolProject:
     required_files: list[str]
     test_tasks_file: Path | None = None
     allowed_write_paths: list[str] = field(default_factory=list)
+    write_scope_entries: list[WriteScopeEntry] = field(default_factory=list)
+    write_scope_mode: str = "all"
+    leakage_gate: bool = False
+    leakage_forbidden: list[str] = field(default_factory=list)
     backend_configs: dict[str, dict[str, Any]] = field(default_factory=dict)
     backend_plugins: dict[str, BackendPluginConfig] = field(default_factory=dict)
     example_profile: str | None = None
@@ -82,6 +88,9 @@ def load_coding_tool_project(project_dir: Path) -> CodingToolProject:
             for item in test_tasks_payload
         ]
 
+    _allowed_paths, _write_scope_entries = parse_allowed_write_paths(config.get("allowed_write_paths", []))
+    _write_scope_mode = normalize_write_scope_mode(config.get("write_scope_mode", "all"))
+
     return CodingToolProject(
         root_dir=project_dir,
         objective=str(config["objective"]),
@@ -91,7 +100,11 @@ def load_coding_tool_project(project_dir: Path) -> CodingToolProject:
         tasks_file=tasks_file,
         test_tasks_file=test_tasks_file,
         required_files=[str(value) for value in config.get("required_files", [])],
-        allowed_write_paths=[str(value) for value in config.get("allowed_write_paths", [])],
+        allowed_write_paths=_allowed_paths,
+        write_scope_entries=_write_scope_entries,
+        write_scope_mode=_write_scope_mode,
+        leakage_gate=bool(config.get("leakage_gate", False)),
+        leakage_forbidden=[str(value) for value in config.get("leakage_forbidden", [])],
         backend_configs=_load_backend_configs(config.get("backends", {})),
         backend_plugins=_load_backend_plugins(config.get("backend_plugins", {})),
         example_profile=config.get("example_profile"),

@@ -37,6 +37,8 @@ _TRIAL_TSV_COLUMNS = (
     "crash_candidate_count",
     "timeout_candidate_count",
     "scope_violation_candidate_count",
+    "class_violation_candidate_count",
+    "leakage_violation_candidate_count",
     "duration_seconds",
     "time_to_first_improvement_seconds",
     "proposal_timeout_seconds",
@@ -61,6 +63,8 @@ _AGGREGATE_TSV_COLUMNS = (
     "timeout_run_rate",
     "crash_run_rate",
     "scope_violation_run_rate",
+    "class_violation_run_rate",
+    "leakage_violation_run_rate",
     "mean_keep_candidate_count",
 )
 
@@ -188,6 +192,8 @@ def aggregate_experiment_trials(trial_rows: Sequence[dict[str, Any]]) -> list[di
         timeout_runs = sum(1 for row in rows if int(row.get("timeout_candidate_count", 0)) > 0)
         crash_runs = sum(1 for row in rows if int(row.get("crash_candidate_count", 0)) > 0)
         scope_violation_runs = sum(1 for row in rows if int(row.get("scope_violation_candidate_count", 0)) > 0)
+        class_violation_runs = sum(1 for row in rows if int(row.get("class_violation_candidate_count", 0)) > 0)
+        leakage_violation_runs = sum(1 for row in rows if int(row.get("leakage_violation_candidate_count", 0)) > 0)
         aggregates.append(
             {
                 "benchmark_name": benchmark_name,
@@ -208,6 +214,8 @@ def aggregate_experiment_trials(trial_rows: Sequence[dict[str, Any]]) -> list[di
                 "timeout_run_rate": _ratio(timeout_runs, trial_count),
                 "crash_run_rate": _ratio(crash_runs, trial_count),
                 "scope_violation_run_rate": _ratio(scope_violation_runs, trial_count),
+                "class_violation_run_rate": _ratio(class_violation_runs, trial_count),
+                "leakage_violation_run_rate": _ratio(leakage_violation_runs, trial_count),
                 "mean_keep_candidate_count": _mean(row.get("keep_candidate_count") for row in rows),
             }
         )
@@ -302,6 +310,8 @@ def _trial_row(
         "crash_candidate_count": run_summary.get("crash_candidate_count"),
         "timeout_candidate_count": run_summary.get("timeout_candidate_count"),
         "scope_violation_candidate_count": run_summary.get("scope_violation_candidate_count"),
+        "class_violation_candidate_count": run_summary.get("class_violation_candidate_count"),
+        "leakage_violation_candidate_count": run_summary.get("leakage_violation_candidate_count"),
         "duration_seconds": run_summary.get("duration_seconds"),
         "time_to_first_improvement_seconds": run_summary.get("time_to_first_improvement_seconds"),
         "proposal_timeout_seconds": run_summary.get("proposal_timeout_seconds"),

@@ -38,6 +38,8 @@ def build_coding_tool_scaffold(profile: str) -> dict[str, str]:
         return _local_oss_smoke_scaffold_files()
     if profile == "local-oss-medium":
         return _local_oss_medium_scaffold_files()
+    if profile == "skills":
+        return _skills_scaffold_files()
     raise ValueError(f"unsupported scaffold profile: {profile}")
 
 
@@ -402,6 +404,161 @@ def _local_oss_medium_scaffold_files() -> dict[str, str]:
             """
         ),
         **_shared_baseline_files(include_bootstrap=True, include_test=True),
+    }
+
+
+
+def _skills_scaffold_files() -> dict[str, str]:
+    return {
+        "README.md": _shared_readme(
+            profile_name="skills",
+            run_codex_command="metaharness run . --backend codex --budget 2",
+            extra_guidance=(
+                "- this profile seeds Agent Skills under `.agents/skills` (Codex), "
+                "with pointers for Claude Code (`.claude/skills`) and Gemini (`.gemini/skills`). "
+                "Keep `write_scope_mode` at `single-class` so a candidate does not mix prompt and skill edits. "
+                "`leakage_gate` rejects diffs that copy task IDs from `tasks.json` or `test_tasks.json`"
+            ),
+        ),
+        ".gitignore": _gitignore(),
+        "metaharness.json": dedent(
+            """
+            {
+              "objective": "Improve a shared Agent Skill without leaking evaluation identifiers.",
+              "constraints": [
+                "Keep the workflow deterministic.",
+                "Prefer edits inside .agents/skills, .claude/skills, or .gemini/skills.",
+                "Do not copy task IDs or held-out test names into skill files."
+              ],
+              "baseline_dir": "baseline",
+              "runs_dir": "runs",
+              "tasks_file": "tasks.json",
+              "test_tasks_file": "test_tasks.json",
+              "required_files": [
+                "AGENTS.md",
+                "CLAUDE.md",
+                "GEMINI.md",
+                ".agents/skills/repo-hygiene/SKILL.md",
+                ".agents/skills/repo-hygiene/scripts/check.sh"
+              ],
+              "allowed_write_paths": [
+                {"path": "AGENTS.md", "class": "prompt"},
+                {"path": "CLAUDE.md", "class": "prompt"},
+                {"path": "GEMINI.md", "class": "prompt"},
+                {"path": ".agents/skills", "class": "skill"},
+                {"path": ".claude/skills", "class": "skill"},
+                {"path": ".gemini/skills", "class": "skill"}
+              ],
+              "write_scope_mode": "single-class",
+              "leakage_gate": true,
+              "leakage_forbidden": [],
+              "backends": {
+                "codex": {
+                  "sandbox_mode": "workspace-write",
+                  "approval_policy": "never",
+                  "use_oss": false,
+                  "local_provider": null,
+                  "model": null,
+                  "proposal_timeout_seconds": null
+                }
+              },
+              "example_profile": "coding-tool-skills",
+              "default_budget": 1,
+              "search_mode": "hill-climb",
+              "proposal_batch_size": 1,
+              "selection_policy": "single"
+            }
+            """
+        ).lstrip("\n"),
+        "tasks.json": dedent(
+            """
+            [
+              {
+                "id": "skill-frontmatter",
+                "type": "file_phrase",
+                "path": ".agents/skills/repo-hygiene/SKILL.md",
+                "weight": 1.0,
+                "required_phrases": [
+                  "name: repo-hygiene",
+                  "Use this when checking repository hygiene before edits."
+                ]
+              },
+              {
+                "id": "hygiene-guidance",
+                "type": "file_phrase",
+                "path": ".agents/skills/repo-hygiene/SKILL.md",
+                "weight": 1.0,
+                "required_phrases": [
+                  "Read the repository before editing.",
+                  "Never use destructive git commands"
+                ]
+              },
+              {
+                "id": "hygiene-script",
+                "type": "command",
+                "weight": 1.5,
+                "command": "bash .agents/skills/repo-hygiene/scripts/check.sh",
+                "expect_exit_code": 0
+              }
+            ]
+            """
+        ).lstrip("\n"),
+        "test_tasks.json": dedent(
+            """
+            [
+              {
+                "id": "heldout-secret-task",
+                "type": "file_phrase",
+                "path": ".agents/skills/repo-hygiene/SKILL.md",
+                "weight": 1.0,
+                "required_phrases": [
+                  "Prefer small, reviewable diffs."
+                ]
+              }
+            ]
+            """
+        ).lstrip("\n"),
+        "baseline/AGENTS.md": dedent(
+            """
+            # Project Instructions
+
+            Shared Agent Skills live under:
+
+            - Codex: `.agents/skills/`
+            - Claude Code: `.claude/skills/`
+            - Gemini CLI: `.gemini/skills/`
+
+            Claude Code should import this file with `@AGENTS.md`.
+            Keep a candidate inside one write-scope class.
+            """
+        ).lstrip("\n"),
+        "baseline/CLAUDE.md": "@AGENTS.md\n",
+        "baseline/GEMINI.md": "@AGENTS.md\n",
+        "baseline/.agents/skills/repo-hygiene/SKILL.md": dedent(
+            """
+            ---
+            name: repo-hygiene
+            description: Placeholder skill that is not yet useful.
+            ---
+
+            Keep the repository tidy.
+            """
+        ).lstrip("\n"),
+        "baseline/.agents/skills/repo-hygiene/scripts/check.sh": dedent(
+            """
+            #!/usr/bin/env bash
+            set -euo pipefail
+
+            echo "repo-hygiene placeholder"
+            exit 1
+            """
+        ).lstrip("\n"),
+        "baseline/.claude/skills/README.md": (
+            "Claude Code skills belong here. Copy or symlink from `.agents/skills/`.\n"
+        ),
+        "baseline/.gemini/skills/README.md": (
+            "Gemini CLI skills belong here. Copy or symlink from `.agents/skills/`.\n"
+        ),
     }
 
 

@@ -279,6 +279,78 @@ class CliTests(unittest.TestCase):
             self.assertEqual(0, run.returncode, run.stderr)
             self.assertIn("best_candidate_id=c0001", run.stdout)
 
+
+    def test_scaffold_skills_profile(self) -> None:
+        repo_root = Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project_dir = Path(tmpdir) / "coding-tool-project"
+            env = {**os.environ, "PYTHONPATH": "src"}
+
+            scaffold = subprocess.run(
+                [
+                    "python",
+                    "-m",
+                    "metaharness.cli",
+                    "scaffold",
+                    "coding-tool",
+                    str(project_dir),
+                    "--profile",
+                    "skills",
+                ],
+                cwd=repo_root,
+                env=env,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(0, scaffold.returncode, scaffold.stderr)
+            self.assertIn("profile=skills", scaffold.stdout)
+
+            config = json.loads((project_dir / "metaharness.json").read_text(encoding="utf-8"))
+            self.assertEqual("single-class", config["write_scope_mode"])
+            self.assertTrue(config["leakage_gate"])
+            self.assertEqual("coding-tool-skills", config["example_profile"])
+            self.assertTrue((project_dir / "baseline" / ".agents" / "skills" / "repo-hygiene" / "SKILL.md").exists())
+            self.assertTrue((project_dir / "baseline" / "CLAUDE.md").exists())
+            self.assertIn("@AGENTS.md", (project_dir / "baseline" / "CLAUDE.md").read_text(encoding="utf-8"))
+
+            run = subprocess.run(
+                [
+                    "python",
+                    "-m",
+                    "metaharness.cli",
+                    "run",
+                    str(project_dir),
+                    "--backend",
+                    "fake",
+                    "--budget",
+                    "1",
+                    "--run-name",
+                    "skills-fake",
+                ],
+                cwd=repo_root,
+                env=env,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(0, run.returncode, run.stderr)
+            self.assertIn("best_candidate_id=c0001", run.stdout)
+
+            run_dir = project_dir / "runs" / "skills-fake"
+            manifest = json.loads((run_dir / "candidates" / "c0001" / "manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual("keep", manifest["outcome"])
+            skill_text = (
+                run_dir
+                / "candidates"
+                / "c0001"
+                / "workspace"
+                / ".agents"
+                / "skills"
+                / "repo-hygiene"
+                / "SKILL.md"
+            ).read_text(encoding="utf-8")
+            self.assertNotIn("heldout-secret-task", skill_text)
+            self.assertNotIn("skill-frontmatter", skill_text)
+
     def test_codex_smoke_probe_only(self) -> None:
         if shutil.which("codex") is None:
             self.skipTest("codex CLI not installed")
