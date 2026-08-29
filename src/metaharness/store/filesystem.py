@@ -363,6 +363,8 @@ class FilesystemRunStore:
                 "outcome": candidate.outcome,
                 "outcome_summary": candidate.outcome_summary,
                 "scope_violation_paths": candidate.scope_violation_paths,
+                "leakage_violation_tokens": candidate.leakage_violation_tokens,
+                "class_violation_classes": candidate.class_violation_classes,
                 "frontier_rank": candidate.frontier_rank,
                 "change_manifest_valid": candidate.change_manifest_valid,
                 "change_manifest_change_count": candidate.change_manifest_change_count,

@@ -138,6 +138,41 @@ class CodingToolConfigTests(unittest.TestCase):
             project = load_coding_tool_project(root)
             self.assertEqual(["AGENTS.md", "scripts"], project.allowed_write_paths)
 
+
+    def test_load_project_reads_write_scope_and_leakage_gate(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            (root / "baseline").mkdir()
+            (root / "tasks.json").write_text(
+                '[{"id":"search-secret-task","type":"file_phrase","path":"AGENTS.md","required_phrases":["x"]}]',
+                encoding="utf-8",
+            )
+            (root / "metaharness.json").write_text(
+                """
+                {
+                  "objective": "demo",
+                  "constraints": [],
+                  "required_files": [],
+                  "allowed_write_paths": [
+                    {"path": "AGENTS.md", "class": "prompt"},
+                    {"path": ".agents/skills", "class": "skill"}
+                  ],
+                  "write_scope_mode": "single-class",
+                  "leakage_gate": true,
+                  "leakage_forbidden": ["keyword-dispatch"],
+                  "backends": {}
+                }
+                """.strip(),
+                encoding="utf-8",
+            )
+
+            project = load_coding_tool_project(root)
+            self.assertEqual(["AGENTS.md", ".agents/skills"], project.allowed_write_paths)
+            self.assertEqual("single-class", project.write_scope_mode)
+            self.assertTrue(project.leakage_gate)
+            self.assertEqual(["keyword-dispatch"], project.leakage_forbidden)
+            self.assertEqual(["prompt", "skill"], [entry.write_class for entry in project.write_scope_entries])
+
     def test_make_backend_applies_gemini_backend_config(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)

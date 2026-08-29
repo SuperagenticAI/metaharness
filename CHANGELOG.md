@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-08-29
+
+### Added
+- Leakage gate rejects candidate diffs that copy task IDs, test names, or other forbidden evaluation tokens into harness files (`leakage_gate`, outcome `leakage-violation`).
+- Write-scope classes on `allowed_write_paths` (`prompt`, `skill`, `middleware`, and related) with optional `write_scope_mode: "single-class"` (outcome `class-violation`).
+- `skills` scaffold profile that seeds a shared Agent Skill under `.agents/skills`, plus Claude/Gemini skill directories, `@AGENTS.md` imports, and held-out `test_tasks.json`.
+
 ### Changed
 - Official comparison and alignment docs now cover the July 2026 Harbor meta-harness pilot, Harness Forge, HarnessCompass, and the Wang et al. harness-evolution eval critique.
 - Official comparison no longer lists Pi and OpenCode as current backends. Those were removed in 0.2.0. Current experimental backends are Gemini CLI and Omnigent.

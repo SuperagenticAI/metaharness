@@ -7,6 +7,7 @@ from typing import Any
 from pathlib import Path
 
 from ...api import optimize_harness
+from ...core.leakage import collect_leakage_tokens
 from ...extensions import create_backend_from_factory
 from ...models import EvaluationResult, ValidationResult
 from ...proposer.codex_exec import CodexExecBackend
@@ -243,6 +244,8 @@ def make_backend(
             return _coding_tool_python_cli_fake_backend()
         if project.example_profile == "coding-tool-scaffold":
             return _coding_tool_scaffold_fake_backend()
+        if project.example_profile == "coding-tool-skills":
+            return _coding_tool_skills_fake_backend()
         if project.example_profile == "omnigent-agent":
             return _coding_tool_omnigent_agent_fake_backend()
         return FakeBackend()
@@ -279,6 +282,14 @@ def run_coding_tool_project(
         objective=project.objective,
         constraints=project.constraints,
         allowed_write_paths=project.allowed_write_paths,
+        write_scope_mode=project.write_scope_mode,
+        write_scope_entries=project.write_scope_entries,
+        leakage_gate=project.leakage_gate,
+        leakage_tokens=collect_leakage_tokens(
+            enabled=project.leakage_gate,
+            extra=project.leakage_forbidden,
+            task_ids=[task.id for task in [*project.tasks, *project.test_tasks]],
+        ),
         trace_evidence_path=trace_evidence_path,
         search_mode=search_mode or project.search_mode,
         proposal_batch_size=proposal_batch_size if proposal_batch_size is not None else project.proposal_batch_size,
@@ -461,6 +472,42 @@ def _coding_tool_python_cli_fake_backend() -> FakeBackend:
                         "PYTHONPATH=fixture_repo/src .venv/bin/python -m benchcli.cli status --config fixture_repo/fixture_config.json | grep -q '^ready:3$'\n"
                     ),
                 },
+            ],
+        }
+    )
+
+
+
+def _coding_tool_skills_fake_backend() -> FakeBackend:
+    skill_path = ".agents/skills/repo-hygiene/SKILL.md"
+    script_path = ".agents/skills/repo-hygiene/scripts/check.sh"
+    skill_body = (
+        "---\n"
+        "name: repo-hygiene\n"
+        "description: Use this when checking repository hygiene before edits.\n"
+        "---\n\n"
+        "Read the repository before editing.\n"
+        "Never use destructive git commands such as `git reset --hard` or `git checkout --`.\n"
+        "Prefer small, reviewable diffs.\n"
+    )
+    script_body = (
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n\n"
+        "grep -q 'Use this when checking repository hygiene before edits.' "
+        ".agents/skills/repo-hygiene/SKILL.md\n"
+        "grep -q 'Read the repository before editing.' "
+        ".agents/skills/repo-hygiene/SKILL.md\n"
+        "grep -q 'Never use destructive git commands' "
+        ".agents/skills/repo-hygiene/SKILL.md\n"
+        "echo 'repo-hygiene checks passed'\n"
+    )
+    return FakeBackend(
+        mutation=lambda request: {
+            "summary": f"Improved repo-hygiene skill for {request.candidate_id}.",
+            "final_text": "Updated the repo-hygiene skill and its check script.",
+            "files": [
+                {"relative_path": skill_path, "content": skill_body},
+                {"relative_path": script_path, "content": script_body},
             ],
         }
     )

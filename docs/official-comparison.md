@@ -71,7 +71,7 @@ These projects sit next to this library. They are not features of this repositor
 - [Harbor](https://github.com/laude-institute/harbor): eval runtime for Terminal-Bench 2 and related agent suites. The official Meta-Harness repo now pilots Harbor as an outer-loop substrate. This library does not wrap `harbor run` yet.
 - [Harness Forge](https://github.com/001TMF/harness-forge): independent Claude Code skill reimplementation of the Meta-Harness loop.
 - [AHE](https://arxiv.org/abs/2604.25850) ([code](https://github.com/china-qijizhifeng/agentic-harness-engineering)): component-level harness evolution with change manifests. This repo already stores AHE-style manifests; it does not implement AHE's seven-component tracks or rollback-on-failed-attribution.
-- [HarnessCompass](https://arxiv.org/abs/2608.01918) (August 2026): generalization gate against task-ID / test-name overfitting, plus component-wise tracks. Not implemented here. A leakage audit on `inspect` is the smallest credible step.
+- [HarnessCompass](https://arxiv.org/abs/2608.01918) (August 2026): generalization gate against task-ID / test-name overfitting, plus component-wise tracks. This repo now rejects leaking diffs (`leakage-violation`) and can constrain a candidate to one write-scope class (`class-violation`). It does not yet implement the full Compass component tracks.
 - [Wang et al., Rethinking the Evaluation of Harness Evolution](https://arxiv.org/abs/2607.12227) ([code](https://github.com/rethinking-harness-evolution), 14 July 2026): on Terminal-Bench 2.1, AHE-style evolution often does not beat matched-budget sampling. This is why search/test splits should stay first-class, and why future `compare` baselines should include Best-of-N / sequential refine under the same budget.
 
 This repository is listed on the official Meta-Harness README as the Codex community implementation.
@@ -104,7 +104,7 @@ Recommended strategy is additive, not replacement:
 2. Implement domain logic through this repo's adapter hooks (`validate`, `evaluate_search`, `evaluate_test`).
 3. Start in `hill-climb` mode for cost control; move to `frontier` + `pareto` when multi-objective tradeoffs matter.
 4. Use `inspect` and `ledger` outputs as evidence for keep/discard decisions and regression tracking.
-5. Treat Harbor, Claude Code, and a generalization-gate inspect audit as the next alignment work, not as already-shipped surfaces.
+5. Treat Harbor and a Claude Code proposer as the next alignment work. Leakage gating and single-class write scope are now available on coding-tool projects.
 
 ## Terminology Mapping
 

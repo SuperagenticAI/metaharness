@@ -38,6 +38,8 @@ _SUMMARY_TSV_COLUMNS = (
     "timeout_candidate_count",
     "no_change_candidate_count",
     "scope_violation_candidate_count",
+    "class_violation_candidate_count",
+    "leakage_violation_candidate_count",
     "duration_seconds",
     "first_improving_candidate_id",
     "best_test_objective",
@@ -72,6 +74,8 @@ _LEDGER_TSV_COLUMNS = (
     "tool_call_count",
     "changed_files",
     "scope_violation_paths",
+    "class_violation_classes",
+    "leakage_violation_tokens",
     "proposal_summary",
     "validation_summary",
     "evaluation_summary",
@@ -144,6 +148,8 @@ def summarize_run(run_dir: str | Path) -> dict[str, Any]:
         "timeout_candidate_count": outcome_counts.get("timeout", 0),
         "no_change_candidate_count": outcome_counts.get("no-change", 0),
         "scope_violation_candidate_count": outcome_counts.get("scope-violation", 0),
+        "class_violation_candidate_count": outcome_counts.get("class-violation", 0),
+        "leakage_violation_candidate_count": outcome_counts.get("leakage-violation", 0),
         "best_changed_files": best_changed_files,
         "best_changed_file_count": len(filtered_changed_files),
         "best_changed_files_truncated_count": max(0, len(filtered_changed_files) - len(best_changed_files)),
@@ -221,6 +227,8 @@ def candidate_ledger(run_dir: str | Path) -> list[dict[str, Any]]:
                 "tool_call_count": int(proposal.get("tool_call_count", 0)) if isinstance(proposal, dict) else 0,
                 "changed_files": filtered_changed_files,
                 "scope_violation_paths": [str(value) for value in candidate.get("scope_violation_paths", [])],
+                "class_violation_classes": [str(value) for value in candidate.get("class_violation_classes", [])],
+                "leakage_violation_tokens": [str(value) for value in candidate.get("leakage_violation_tokens", [])],
                 "proposal_summary": _proposal_summary(proposal) or "",
                 "validation_summary": _stage_summary(validation),
                 "evaluation_summary": _stage_summary(evaluation),
@@ -276,6 +284,8 @@ def render_comparison_table(summaries: Sequence[dict[str, Any]]) -> str:
         "crashes",
         "timeouts",
         "scope_viol",
+        "class_viol",
+        "leak_viol",
         "duration_s",
     ]
     rows = []
@@ -292,6 +302,8 @@ def render_comparison_table(summaries: Sequence[dict[str, Any]]) -> str:
                 str(summary.get("crash_candidate_count", 0)),
                 str(summary.get("timeout_candidate_count", 0)),
                 str(summary.get("scope_violation_candidate_count", 0)),
+                str(summary.get("class_violation_candidate_count", 0)),
+                str(summary.get("leakage_violation_candidate_count", 0)),
                 _format_float(summary.get("duration_seconds")),
             ]
         )

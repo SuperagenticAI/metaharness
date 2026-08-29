@@ -125,6 +125,8 @@ class CandidateRecord:
     outcome: str = "unknown"
     outcome_summary: str = ""
     scope_violation_paths: list[str] = field(default_factory=list)
+    leakage_violation_tokens: list[str] = field(default_factory=list)
+    class_violation_classes: list[str] = field(default_factory=list)
     frontier_rank: int | None = None
     change_manifest_valid: bool | None = None
     change_manifest_change_count: int = 0
