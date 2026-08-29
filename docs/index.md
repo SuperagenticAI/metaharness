@@ -114,6 +114,8 @@ Two other projects were also useful reference points while shaping this library:
 
 For a direct official-vs-this-repo breakdown, including use-case guidance, see [Official Comparison](official-comparison.md).
 
+Later official and community work to track, without treating it as this package's API: the Harbor meta-harness pilot in the official repo, [Harness Forge](https://github.com/001TMF/harness-forge), [AHE](https://arxiv.org/abs/2604.25850), [HarnessCompass](https://arxiv.org/abs/2608.01918), and [Wang et al. 2026](https://arxiv.org/abs/2607.12227) on evaluation protocol.
+
 ## What It Optimizes
 
 <div class="callout-card" markdown="1">

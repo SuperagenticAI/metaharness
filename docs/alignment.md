@@ -7,8 +7,10 @@ This page documents how `metaharness` aligns with the official Stanford IRIS Met
 The official repository is the canonical research reference with:
 
 - broad domain onboarding via `ONBOARDING.md`
-- paper reference experiments
+- paper reference experiments (text classification, Terminal-Bench 2)
 - domain-specific outer loops
+- Claude Code as the shipped proposer
+- an experimental Harbor pilot (`experimental/harbor_meta_harness`, 2026-07-11)
 
 This repository is a production-oriented library with:
 
@@ -25,14 +27,17 @@ The right strategy is to merge strengths, not replace one with the other.
 - Artifact-driven outer loop with inspectable candidate history.
 - Proposer abstraction that can support multiple providers.
 - Deterministic scoring as the decision signal for keep/discard behavior.
+- Environment bootstrap snapshots before each proposal (the main mechanism behind the paper's Terminal-Bench 2 result).
+- AHE-style change manifests on candidates.
 
 ## Main Gaps To Close
 
-- Domain onboarding is not yet a first-class flow.
-- Search-set and held-out test-set evaluation are not separated as first-class stages.
-- Multi-candidate iteration and frontier policies are limited.
-- Multi-objective selection policies are limited.
-- Provider telemetry can be richer for research-grade analysis.
+- No first-class Claude Code proposer, which is what the paper and official examples actually run.
+- No Harbor / Terminal-Bench evaluator adapter, so this repo cannot reproduce the paper headline number or later AHE / HarnessCompass results.
+- Leakage and generalization-gate checks are not part of `inspect` yet (task IDs, test names, keyword dispatch).
+- Test-time-scaling baselines (Best-of-N / sequential refine under a matched budget) are not a `compare` mode yet. See [Wang et al. 2026](https://arxiv.org/abs/2607.12227).
+- Component-wise tracks (tools and middleware vs prompt, skills, and memory) are not first-class. The workspace is still one blob.
+- Provider telemetry can still be richer for research-grade analysis.
 
 ## Alignment Principles
 
@@ -71,11 +76,13 @@ The right strategy is to merge strengths, not replace one with the other.
 
 ## Near-Term Roadmap
 
-1. Stabilize onboarding command and docs.
-2. Introduce adapter interfaces behind feature flags.
-3. Add split evaluation support for one built-in example benchmark.
-4. Add optional frontier mode with one reference policy.
-5. Expand telemetry schemas and reporting.
+Shipped items above stay shipped. The remaining alignment work is:
+
+1. Claude Code proposer backend, paper-faithful, next to Codex.
+2. Harbor evaluator adapter so `evaluate_search` / `evaluate_test` can call `harbor run` on Terminal-Bench 2 (and later SWE-bench).
+3. Leakage / generalization-gate audit in `inspect` and `summarize` (reject or flag diffs that mention task IDs, test function names, or private keyword dispatch). Inspired by [HarnessCompass](https://arxiv.org/abs/2608.01918).
+4. Matched-budget sampling baseline in `compare`, so harness-evolution gains are not confused with extra search. Inspired by [Wang et al.](https://arxiv.org/abs/2607.12227).
+5. Optional component tracks via `allowed_write_paths` / `domain_spec.md`, so a candidate can be constrained to tools-and-middleware or to prompt-and-skills.
 
 ## Risks And Mitigations
 
@@ -88,9 +95,17 @@ The right strategy is to merge strengths, not replace one with the other.
 - Risk: complexity jump in CLI and run layout.
 - Mitigation: gate advanced modes behind explicit flags and document layouts clearly.
 
+- Risk: reporting harness-evolution gains that are actually extra test-time search.
+- Mitigation: keep search/test isolation, and add matched-budget sampling baselines before claiming Harbor/TB2 numbers.
+
+- Risk: evolved harnesses memorizing task IDs or test names.
+- Mitigation: add a generalization-gate / regex leakage audit to `inspect`.
+
 ## Success Criteria
 
 - A new domain can be scoped using onboarding files before any code changes.
 - At least one adapter can run with explicit search/test split isolation.
 - Frontier mode improves reproducibility of candidate selection in repeated trials.
 - Existing coding-tool benchmarks still run unchanged in default mode.
+- A Claude Code backend can propose against the same coding-tool benchmarks as Codex.
+- A Harbor adapter can score a candidate on a published Terminal-Bench subset without leaking held-out task names into proposer context.
