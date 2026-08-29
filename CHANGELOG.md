@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-08-29
+
 ### Added
 - Leakage gate rejects candidate diffs that copy task IDs, test names, or other forbidden evaluation tokens into harness files (`leakage_gate`, outcome `leakage-violation`).
 - Write-scope classes on `allowed_write_paths` (`prompt`, `skill`, `middleware`, and related) with optional `write_scope_mode: "single-class"` (outcome `class-violation`).
