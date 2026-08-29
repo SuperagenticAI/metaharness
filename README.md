@@ -456,6 +456,13 @@ uv run metaharness run examples/python_cli_benchmark --backend fake --budget 1 -
 uv run python examples/ticket_router/run.py --backend fake --budget 1
 ```
 
+
+## Related Work
+
+`metaharness` is an unofficial implementation of [Meta-Harness](https://arxiv.org/abs/2603.28052). The canonical research repo is [stanford-iris-lab/meta-harness](https://github.com/stanford-iris-lab/meta-harness).
+
+As of July 2026 the official repo includes an experimental Harbor pilot (`experimental/harbor_meta_harness`). Sibling community work includes [Harness Forge](https://github.com/001TMF/harness-forge). Later papers to track: [AHE](https://arxiv.org/abs/2604.25850), [HarnessCompass](https://arxiv.org/abs/2608.01918), and [Wang et al. on harness-evolution evals](https://arxiv.org/abs/2607.12227). See [Official comparison](https://superagenticai.github.io/metaharness/official-comparison/) and [Alignment](https://superagenticai.github.io/metaharness/alignment/).
+
 ## License
 
 [Functional Source License, Version 1.1, ALv2 Future License](LICENSE) (`FSL-1.1-ALv2`).

@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+- Official comparison and alignment docs now cover the July 2026 Harbor meta-harness pilot, Harness Forge, HarnessCompass, and the Wang et al. harness-evolution eval critique.
+- Official comparison no longer lists Pi and OpenCode as current backends. Those were removed in 0.2.0. Current experimental backends are Gemini CLI and Omnigent.
+- Filled empty reference links on the official comparison page.
+
 ## [0.5.0] - 2026-08-23
 
 ### Changed
