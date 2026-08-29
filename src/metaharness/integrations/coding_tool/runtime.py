@@ -248,6 +248,8 @@ def make_backend(
             return _coding_tool_skills_fake_backend()
         if project.example_profile == "omnigent-agent":
             return _coding_tool_omnigent_agent_fake_backend()
+        if project.example_profile == "coding-tool-omnigent-routing":
+            return _coding_tool_omnigent_routing_fake_backend()
         return FakeBackend()
     plugin_config = project.backend_plugins.get(name)
     if plugin_config is not None:
@@ -570,6 +572,36 @@ def _coding_tool_omnigent_agent_fake_backend() -> FakeBackend:
                         "Focus on correctness, tests, security, and maintainability.\n"
                         "Check that the agent config, instructions, sandbox, and policies match the task contract.\n"
                     ),
+                },
+            ],
+        }
+    )
+
+
+def _coding_tool_omnigent_routing_fake_backend() -> FakeBackend:
+    routing_table = (
+        "{\n"
+        '  "route_options": [\n'
+        '    {"harness": "pi", "model": "gpt-5-4-mini"},\n'
+        '    {"harness": "codex", "model": "gpt-5-5"},\n'
+        '    {"harness": "claude-sdk", "model": "claude-opus-4-8"}\n'
+        "  ],\n"
+        '  "rules": [\n'
+        '    {"when": ["hello", "list files", "status"], "harness": "pi"},\n'
+        '    {"when": ["refactor", "add tests", "auth module"], "harness": "claude-sdk"},\n'
+        '    {"when": ["implement"], "harness": "codex"}\n'
+        "  ],\n"
+        '  "default": {"harness": "codex"}\n'
+        "}\n"
+    )
+    return FakeBackend(
+        mutation=lambda request: {
+            "summary": f"Improved Omnigent-shaped routing table for {request.candidate_id}.",
+            "final_text": "Updated routing.json with harness+model rules for mixed task difficulty.",
+            "files": [
+                {
+                    "relative_path": "routing.json",
+                    "content": routing_table,
                 },
             ],
         }

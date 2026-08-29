@@ -207,7 +207,9 @@ The Omnigent backend has a real smoke result on the Omnigent-agent benchmark: `c
 - `examples/python_fixture_benchmark`
 - `examples/python_cli_benchmark`
 - `examples/omnigent_agent_benchmark`
+- `examples/omnigent_routing_benchmark`
 - `examples/ticket_router`
+- `examples/embed_runtime`
 
 The two Python benchmarks are the main release-quality examples.
 They use real shell scripts, real fixture repositories, and deterministic acceptance checks rather than placeholder text-only scoring.
@@ -258,6 +260,7 @@ uv run metaharness experiment \
 
 - [Getting Started](getting-started.md)
 - [Architecture](architecture.md)
+- [Embed](embed.md)
 - [Providers](providers.md)
 - [Extensions](extensions.md)
 - [Benchmarks](benchmarks.md)

@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- Omnigent-shaped routing benchmark (`examples/omnigent_routing_benchmark`) with leakage gate and single-class middleware write scope.
+- Host embed docs (`docs/embed.md`) and `examples/embed_runtime` so Omnigent, HarnessRouter (UHP), and AgentSky-style hosts can call `optimize_harness`.
+
 ## [0.6.0] - 2026-08-29
 
 ### Added

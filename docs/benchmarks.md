@@ -2,16 +2,25 @@
 
 ## Overview
 
-`metaharness` currently includes three example targets.
+`metaharness` currently includes several example targets.
 
 Two are real coding-tool benchmarks:
 
 - `python_fixture_benchmark`
 - `python_cli_benchmark`
 
+Omnigent-shaped examples:
+
+- `omnigent_agent_benchmark` (declarative agent config)
+- `omnigent_routing_benchmark` (JSON harness+model routing table)
+
 One is a smaller deterministic example:
 
 - `ticket_router`
+
+Host embed (library call, not a benchmark loop of its own):
+
+- `embed_runtime`
 
 ## `python_fixture_benchmark`
 
@@ -103,6 +112,27 @@ uv run metaharness run \
   --model gpt-oss:20b \
   --proposal-timeout 240 \
   --budget 1
+```
+
+## `omnigent_routing_benchmark`
+
+Path:
+
+- `examples/omnigent_routing_benchmark`
+
+What it exercises:
+
+- an Omnigent-shaped `routes:select` JSON table as the candidate surface
+- command tasks that call a stable `route.py` CLI
+- leakage gate against copying task IDs into `routing.json`
+- single-class middleware write scope (`routing.json` only)
+
+This is not a live Omnigent server. The table is the optimization target.
+
+Typical run:
+
+```bash
+uv run metaharness run examples/omnigent_routing_benchmark --backend fake --budget 1
 ```
 
 ## `ticket_router`

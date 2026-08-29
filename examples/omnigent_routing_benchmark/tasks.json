@@ -1,0 +1,34 @@
+[
+  {
+    "id": "route-simple",
+    "type": "command",
+    "weight": 1.0,
+    "command": "python3 route.py --prompt \"say hello and list files\" | grep -qx pi",
+    "expect_exit_code": 0
+  },
+  {
+    "id": "route-mid",
+    "type": "command",
+    "weight": 1.0,
+    "command": "python3 route.py --prompt \"implement a paginated list endpoint\" | grep -qx codex",
+    "expect_exit_code": 0
+  },
+  {
+    "id": "route-refactor",
+    "type": "command",
+    "weight": 1.0,
+    "command": "python3 route.py --prompt \"Refactor the auth module and add tests\" | grep -qx claude-sdk",
+    "expect_exit_code": 0
+  },
+  {
+    "id": "route-table-harnesses",
+    "type": "file_phrase",
+    "path": "routing.json",
+    "weight": 1.0,
+    "required_phrases": [
+      "pi",
+      "codex",
+      "claude-sdk"
+    ]
+  }
+]

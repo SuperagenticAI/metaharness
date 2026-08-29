@@ -130,6 +130,8 @@ The repository currently includes:
 - two real coding-tool benchmark targets
 - a smaller deterministic ticket-router example
 - an Omnigent-agent benchmark target for optimizing declarative agent configs, instructions, skills, and policy shape
+- an Omnigent-shaped routing benchmark that treats a JSON harness+model table as middleware
+- a thin embed path so other agent runtimes can call `optimize_harness` as a library
 - hosted Codex runs on the real benchmarks
 - local Codex over Ollama runs with `gpt-oss:20b` and `gpt-oss:120b`
 - a docs site published from GitHub Actions
@@ -166,6 +168,7 @@ In that run, Omnigent improved the built-in Omnigent-agent benchmark from the ba
 - [Project documentation](https://superagenticai.github.io/metaharness/)
 - [Getting started](https://superagenticai.github.io/metaharness/getting-started/)
 - [Architecture](https://superagenticai.github.io/metaharness/architecture/)
+- [Embed in a host runtime](https://superagenticai.github.io/metaharness/embed/)
 - [Providers](https://superagenticai.github.io/metaharness/providers/)
 - [Extensions](https://superagenticai.github.io/metaharness/extensions/)
 - [Benchmarks](https://superagenticai.github.io/metaharness/benchmarks/)
@@ -302,9 +305,22 @@ Real benchmarks:
 - [examples/python_fixture_benchmark](examples/python_fixture_benchmark)
 - [examples/python_cli_benchmark](examples/python_cli_benchmark)
 
+Omnigent-shaped routing (coding-tool project, JSON routing table as the candidate surface):
+
+- [examples/omnigent_routing_benchmark](examples/omnigent_routing_benchmark)
+
+Omnigent agent config target:
+
+- [examples/omnigent_agent_benchmark](examples/omnigent_agent_benchmark)
+
 Smaller deterministic example:
 
 - [examples/ticket_router](examples/ticket_router)
+
+Host embed (call `optimize_harness` from Omnigent, HarnessRouter/UHP, or AgentSky-style runtimes):
+
+- [docs/embed.md](docs/embed.md)
+- [examples/embed_runtime](examples/embed_runtime)
 
 Run the ticket router example:
 
@@ -463,7 +479,7 @@ uv run python examples/ticket_router/run.py --backend fake --budget 1
 
 `metaharness` is an unofficial implementation of [Meta-Harness](https://arxiv.org/abs/2603.28052). The canonical research repo is [stanford-iris-lab/meta-harness](https://github.com/stanford-iris-lab/meta-harness).
 
-As of July 2026 the official repo includes an experimental Harbor pilot (`experimental/harbor_meta_harness`). Sibling community work includes [Harness Forge](https://github.com/001TMF/harness-forge). Later papers to track: [AHE](https://arxiv.org/abs/2604.25850), [HarnessCompass](https://arxiv.org/abs/2608.01918), and [Wang et al. on harness-evolution evals](https://arxiv.org/abs/2607.12227). See [Official comparison](https://superagenticai.github.io/metaharness/official-comparison/) and [Alignment](https://superagenticai.github.io/metaharness/alignment/).
+As of July 2026 the official repo includes an experimental Harbor pilot (`experimental/harbor_meta_harness`). Sibling community work includes [Harness Forge](https://github.com/001TMF/harness-forge). Later papers to track: [AHE](https://arxiv.org/abs/2604.25850), [HarnessCompass](https://arxiv.org/abs/2608.01918), and [Wang et al. on harness-evolution evals](https://arxiv.org/abs/2607.12227). See [Official comparison](https://superagenticai.github.io/metaharness/official-comparison/), [Alignment](https://superagenticai.github.io/metaharness/alignment/), and [Embed](https://superagenticai.github.io/metaharness/embed/).
 
 ## License
 

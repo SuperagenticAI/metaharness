@@ -52,6 +52,22 @@ uv run metaharness run examples/python_cli_benchmark --backend codex --hosted --
 uv run metaharness run examples/python_cli_benchmark --backend codex --oss --local-provider ollama --model gpt-oss:20b --proposal-timeout 240 --budget 1
 ```
 
+### `omnigent_routing_benchmark`
+
+Path: `examples/omnigent_routing_benchmark`
+
+Focus:
+
+- Omnigent-shaped smart routing table (`routing.json`) as middleware
+- mixed task difficulty (cheap / mid / hard harness choice)
+- leakage gate and single-class write scope
+
+Run it:
+
+```bash
+uv run metaharness run examples/omnigent_routing_benchmark --backend fake --budget 1
+```
+
 ## Reporting
 
 Summarize all runs for a project:

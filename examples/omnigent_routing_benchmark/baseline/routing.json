@@ -1,0 +1,7 @@
+{
+  "route_options": [
+    {"harness": "pi", "model": "gpt-5-4-mini"}
+  ],
+  "rules": [],
+  "default": {"harness": "pi"}
+}
